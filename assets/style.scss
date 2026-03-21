@@ -1,0 +1,227 @@
+:root {
+  --bg: #050b16;
+  --panel: rgba(9, 17, 31, 0.82);
+  --panel-border: rgba(116, 239, 255, 0.35);
+  --panel-glow: rgba(116, 239, 255, 0.28);
+  --text: #ebfbff;
+  --muted: rgba(235, 251, 255, 0.7);
+  --accent: #74efff;
+  --accent-alt: #ff9a4d;
+  --danger: #ff7548;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  overflow: hidden;
+}
+
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.control-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 10;
+  width: min(330px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(11, 19, 35, 0.92), rgba(8, 14, 26, 0.82));
+  border: 1px solid var(--panel-border);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 0 22px var(--panel-glow),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  display: grid;
+  gap: 12px;
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+}
+
+body.race-live .control-panel {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(18px) scale(0.96);
+  pointer-events: none;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.68rem;
+}
+
+.panel-head h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.roster-pill {
+  min-width: 64px;
+  min-height: 64px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, rgba(116, 239, 255, 0.18), rgba(255, 154, 77, 0.12));
+  border: 1px solid rgba(116, 239, 255, 0.28);
+}
+
+.roster-pill span {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.roster-pill strong {
+  font-size: 1.4rem;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.field,
+.toggle {
+  display: grid;
+  gap: 6px;
+}
+
+.field span,
+.toggle span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+textarea,
+select,
+input[type='number'] {
+  width: 100%;
+  border: 1px solid rgba(116, 239, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  padding: 10px 12px;
+  outline: none;
+}
+
+textarea {
+  min-height: 104px;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+textarea:focus,
+select:focus,
+input[type='number']:focus {
+  border-color: rgba(116, 239, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(116, 239, 255, 0.14);
+}
+
+.toggle {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(116, 239, 255, 0.12);
+}
+
+.toggle input {
+  accent-color: var(--accent);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 12px;
+  font: 700 0.92rem "Trebuchet MS", sans-serif;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  color: #07111d;
+  box-shadow: 0 10px 24px rgba(116, 239, 255, 0.18);
+}
+
+.btn.ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-box {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.status-box span {
+  display: block;
+  color: var(--accent);
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.status-box p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 720px) {
+  .control-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: 12px;
+  }
+
+  .field-grid,
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}

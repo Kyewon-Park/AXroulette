@@ -1,0 +1,37 @@
+import type { StageDef } from './data/maps';
+import type { MapEntityState } from './types/MapEntity.type';
+import type { VectorLike } from './types/VectorLike';
+
+export interface IPhysics {
+  init(): Promise<void>;
+
+  clear(): void;
+
+  clearMarbles(): void;
+
+  createStage(stage: StageDef): void;
+
+  createMarble(id: number, x: number, y: number): void;
+
+  shakeMarble(id: number): void;
+
+  removeMarble(id: number): void;
+
+  getMarblePosition(id: number): { x: number; y: number; angle: number };
+
+  getEntities(): MapEntityState[];
+
+  impact(id: number): void;
+
+  applyImpulse(id: number, impulse: VectorLike): void;
+
+  setMarbleGhost(id: number, value: boolean): void;
+
+  setMarbleTransform(id: number, position: VectorLike, angle?: number): void;
+
+  setMarbleVelocity(id: number, velocity: VectorLike): void;
+
+  start(): void;
+
+  step(deltaSeconds: number): void;
+}
