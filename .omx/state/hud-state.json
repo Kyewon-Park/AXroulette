@@ -1,5 +1,5 @@
 {
-  "last_turn_at": "2026-03-21T18:10:09.782Z",
-  "turn_count": 46,
-  "last_agent_output": "`README.md`를 프로젝트 기준으로 전면 교체했습니다. 소개 문구를 현재 구현에 맞춰 다시 쓰고, 실행 방법, 입력 문법(`/가중치`, `*개수`), 코스/순위 선택 방식, "
+  "last_turn_at": "2026-03-21T18:21:37.196Z",
+  "turn_count": 47,
+  "last_agent_output": "원인은 경로 설정이었습니다. GitHub Pages 프로젝트 페이지는 보통 `https://<user>.github.io/AXroulette/` 아래에서 열리는데, 기존 빌드는 J"
 }

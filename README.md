@@ -104,12 +104,7 @@ yarn lint
 
 GitHub Actions 워크플로우가 `main` 브랜치 푸시 시 `dist/`를 GitHub Pages로 배포하도록 구성되어 있습니다.
 
-주의할 점:
-
-- `package.json`의 빌드 명령은 `--public-url /roulette/` 를 사용합니다.
-- `src/registerServiceWorker.ts` 역시 서비스 워커 경로를 `/roulette/service-worker.js` 로 고정합니다.
-
-배포 경로 또는 저장소 이름이 바뀌면 이 두 위치를 함께 수정해야 합니다.
+현재 설정은 상대 경로 기반으로 맞춰져 있어서, GitHub Pages 프로젝트 경로(`/저장소이름/`)에서도 정적 자산과 서비스 워커가 함께 동작하도록 구성되어 있습니다.
 
 ## 프로젝트 구조
 
