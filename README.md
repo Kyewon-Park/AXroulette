@@ -1,3 +1,13 @@
+## Acknowledgements
+
+This project is based on the following open-source project:
+
+- https://github.com/lazygyu/roulette
+- Author: lazygyu
+- License: MIT License
+
+Modifications have been made to fit this project.
+
 # AXroulette
 
 브라우저에서 실행되는 물리 기반 마블 레이스 룰렛입니다. 참가자 이름을 넣으면 구슬이 트랙을 따라 내려가고, 지정한 순위에 먼저 도달한 참가자를 당첨자로 확정합니다.
