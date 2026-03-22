@@ -10,6 +10,7 @@ export type StageBoost = {
   color: string;
   impulse: VectorLike;
   consumed?: boolean;
+  respawnIn?: number;
 };
 
 export type StageHunter = {
@@ -25,6 +26,9 @@ export type StageHunter = {
   amplitude: number;
   speed: number;
   phase: number;
+  pulseInterval?: number;
+  pulseRadius?: number;
+  pulseForce?: number;
 };
 
 export type StageHunterState = StageHunter & {
@@ -76,6 +80,7 @@ export type StageDef = {
 const COURSE_LEFT = 2.2;
 const COURSE_RIGHT = 23.8;
 const COURSE_WIDTH = 26;
+const DEFAULT_BAR_SPIN = 1.65;
 
 const wall = (points: [number, number][], color?: string): MapEntity => ({
   position: { x: 0, y: 0 },
@@ -91,6 +96,22 @@ const wall = (points: [number, number][], color?: string): MapEntity => ({
 });
 
 const box = (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rotation = 0,
+  color?: string,
+  restitution = 0.08,
+  angularVelocity = (x <= COURSE_WIDTH / 2 ? 1 : -1) * (DEFAULT_BAR_SPIN + Math.min(0.75, Math.abs(rotation) * 0.45))
+): MapEntity => ({
+  position: { x, y },
+  type: 'kinematic',
+  shape: { type: 'box', width, height, rotation, color, bloomColor: color },
+  props: { density: 1, angularVelocity, restitution },
+});
+
+const staticBox = (
   x: number,
   y: number,
   width: number,
@@ -177,10 +198,10 @@ function createFrame(topY: number, goalY: number, accent: string): MapEntity[] {
 function createSideRails(startY: number, endY: number): MapEntity[] {
   const rails: MapEntity[] = [];
   for (let y = startY; y <= endY; y += 18) {
-    rails.push(box(1.0, y, 0.7, 5.1, 0, '#48d7ff'));
-    rails.push(box(25.0, y, 0.7, 5.1, 0, '#ff9a4d'));
-    rails.push(box(1.8, y, 0.18, 4.5, 0, '#84f0ff'));
-    rails.push(box(24.2, y, 0.18, 4.5, 0, '#ffd08a'));
+    rails.push(staticBox(1.0, y, 0.7, 5.1, 0, '#48d7ff'));
+    rails.push(staticBox(25.0, y, 0.7, 5.1, 0, '#ff9a4d'));
+    rails.push(staticBox(1.8, y, 0.18, 4.5, 0, '#84f0ff'));
+    rails.push(staticBox(24.2, y, 0.18, 4.5, 0, '#ffd08a'));
   }
   return rails;
 }
@@ -210,14 +231,26 @@ function createPegField(startY: number, rows: number, gapY: number, color: strin
   return pegs;
 }
 
-function createBumperGate(y: number, color: string, includeCenter = true): MapEntity[] {
+function createBumperGate(
+  y: number,
+  color: string,
+  includeCenter = true,
+  centerAngularVelocity = 0,
+  sideAngularVelocity = 1.8
+): MapEntity[] {
   const entities = [
-    box(7.8, y, 1.7, 0.16, 0.68, color, 0.8),
-    box(18.2, y, 1.7, 0.16, -0.68, color, 0.8),
+    spinner(7.8, y, 1.7, 0.68, sideAngularVelocity, color),
+    spinner(18.2, y, 1.7, -0.68, -sideAngularVelocity, color),
   ];
 
   if (includeCenter) {
-    entities.splice(1, 0, box(13.0, y + 1.2, 2.2, 0.16, 0, '#ffd2a3', 0.85));
+    entities.splice(
+      1,
+      0,
+      centerAngularVelocity === 0
+        ? box(13.0, y + 1.2, 2.2, 0.16, 0, '#ffd2a3', 0.85)
+        : spinner(13.0, y + 1.2, 2.2, 0, centerAngularVelocity, '#ffd2a3')
+    );
   }
 
   return entities;
@@ -318,6 +351,9 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
     amplitude: hunter.amplitude,
     speed: hunter.speed,
     phase: hunter.phase,
+    pulseInterval: hunter.mode === 'magnet' ? 2900 : undefined,
+    pulseRadius: hunter.mode === 'magnet' ? 2.5 : undefined,
+    pulseForce: hunter.mode === 'magnet' ? 4.2 : undefined,
   }));
 
   return { boosts, hunters };
@@ -365,7 +401,7 @@ function createManualWorkCourse(): StageDef {
       ]),
       ...createBumperGate(62, '#ffb26e', false),
       ...createBumperGate(156, '#ffb26e', false),
-      ...createBumperGate(204, '#78e7ff'),
+      ...createBumperGate(204, '#78e7ff', true, 2.4),
       spinner(13, 90, 3.3, 0, 1.6, '#ff8e4d'),
       spinner(13, 140, 3.6, 0, -1.45, '#76ecff'),
       spinner(13, 188, 3.2, 0, 1.85, '#ff8e4d'),

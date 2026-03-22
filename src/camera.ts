@@ -4,12 +4,17 @@ import type { Marble } from './marble';
 import type { VectorLike } from './types/VectorLike';
 
 export class Camera {
+  private static readonly FOLLOW_ALTERNATE_MS = 5200;
+  private static readonly RESULT_OVERVIEW_CYCLE_MS = 32000;
+  private static readonly POSITION_LERP_DIVISOR = 34;
+  private static readonly ZOOM_LERP_DIVISOR = 20;
   private _position: VectorLike = { x: 0, y: 0 };
   private _targetPosition: VectorLike = { x: 0, y: 0 };
   private _zoom: number = 1;
   private _targetZoom: number = 1;
   private _locked = false;
   private _shouldFollowMarbles = false;
+  private _resultOverviewStartedAt: number | null = null;
 
   get zoom() {
     return this._zoom;
@@ -48,6 +53,7 @@ export class Camera {
 
   startFollowingMarbles() {
     this._shouldFollowMarbles = true;
+    this._resultOverviewStartedAt = null;
   }
 
   initializePosition(center?: VectorLike, zoom?: number) {
@@ -60,6 +66,7 @@ export class Camera {
     this._zoom = z;
     this._targetZoom = z;
     this._shouldFollowMarbles = false;
+    this._resultOverviewStartedAt = null;
   }
 
   update({
@@ -68,26 +75,30 @@ export class Camera {
     needToZoom,
     targetIndex,
     elapsedMs,
+    winnerCount,
+    requiredWinnerCount,
   }: {
     marbles: Marble[];
     stage: StageDef;
     needToZoom: boolean;
     targetIndex: number;
     elapsedMs: number;
+    winnerCount: number;
+    requiredWinnerCount: number;
   }) {
     // set target position
     if (!this._locked) {
-      this._calcTargetPositionAndZoom(marbles, stage, needToZoom, targetIndex, elapsedMs);
+      this._calcTargetPositionAndZoom(marbles, stage, needToZoom, targetIndex, elapsedMs, winnerCount, requiredWinnerCount);
     }
 
     this._clampTargetToStage(stage);
 
     // interpolate position
-    this._position.x = this._interpolation(this.x, this._targetPosition.x);
-    this._position.y = this._interpolation(this.y, this._targetPosition.y);
+    this._position.x = this._interpolation(this.x, this._targetPosition.x, Camera.POSITION_LERP_DIVISOR);
+    this._position.y = this._interpolation(this.y, this._targetPosition.y, Camera.POSITION_LERP_DIVISOR);
 
     // interpolate zoom
-    this._zoom = this._interpolation(this._zoom, this._targetZoom);
+    this._zoom = this._interpolation(this._zoom, this._targetZoom, Camera.ZOOM_LERP_DIVISOR);
   }
 
   private _calcTargetPositionAndZoom(
@@ -95,17 +106,26 @@ export class Camera {
     stage: StageDef,
     needToZoom: boolean,
     targetIndex: number,
-    elapsedMs: number
+    elapsedMs: number,
+    winnerCount: number,
+    requiredWinnerCount: number
   ) {
     if (!this._shouldFollowMarbles) {
       return;
     }
 
+    if (winnerCount >= requiredWinnerCount) {
+      this._renderResultOverview(marbles, stage, elapsedMs);
+      return;
+    }
+
+    this._resultOverviewStartedAt = null;
+
     if (marbles.length > 0) {
       const leader = marbles[0];
       const visibleStartY = Math.max(0, stage.topY);
       const progress = (leader.y - visibleStartY) / Math.max(1, stage.goalY - visibleStartY);
-      const alternateIndex = Math.floor(elapsedMs / 2000) % 2 === 0 ? 0 : 4;
+      const alternateIndex = Math.floor(elapsedMs / Camera.FOLLOW_ALTERNATE_MS) % 2 === 0 ? 0 : 4;
       const followIndex = progress >= 2 / 3 ? 0 : Math.min(alternateIndex, marbles.length - 1);
       const targetMarble = marbles[followIndex] ? marbles[followIndex] : marbles[0];
       this.setPosition(targetMarble.position);
@@ -118,6 +138,24 @@ export class Camera {
     } else {
       this.zoom = 1;
     }
+  }
+
+  private _renderResultOverview(marbles: Marble[], stage: StageDef, elapsedMs: number) {
+    if (this._resultOverviewStartedAt === null) {
+      this._resultOverviewStartedAt = elapsedMs;
+    }
+
+    const overviewElapsed = elapsedMs - this._resultOverviewStartedAt;
+    const bottomY = stage.goalY - 6;
+    const topY = marbles.length > 0 ? Math.min(...marbles.map((marble) => marble.y)) : stage.topY + 8;
+    const cycleProgress = (overviewElapsed % Camera.RESULT_OVERVIEW_CYCLE_MS) / Camera.RESULT_OVERVIEW_CYCLE_MS;
+    const sweep = (1 - Math.cos(cycleProgress * Math.PI * 2)) / 2;
+
+    this.setPosition({
+      x: stage.width / 2,
+      y: bottomY + (topY - bottomY) * sweep,
+    });
+    this.zoom = 1;
   }
 
   private _clampTargetToStage(stage: StageDef) {
@@ -138,13 +176,13 @@ export class Camera {
     this._targetPosition.y = Math.min(maxY, Math.max(minY, this._targetPosition.y));
   }
 
-  private _interpolation(current: number, target: number) {
+  private _interpolation(current: number, target: number, divisor: number) {
     const d = target - current;
     if (Math.abs(d) < 1 / initialZoom) {
       return target;
     }
 
-    return current + d / 10;
+    return current + d / divisor;
   }
 
   renderScene(ctx: CanvasRenderingContext2D, callback: (ctx: CanvasRenderingContext2D) => void) {

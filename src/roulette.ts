@@ -13,6 +13,7 @@ import { RankRenderer } from './rankRenderer';
 import { RouletteRenderer } from './rouletteRenderer';
 import { SkillEffect } from './skillEffect';
 import type { ColorTheme } from './types/ColorTheme';
+import type { EntityCircleShape } from './types/MapEntity.type';
 import type { MouseEventHandlerName, MouseEventName } from './types/mouseEvents.type';
 import type { UIObject } from './UIObject';
 import { bound } from './utils/bound.decorator';
@@ -26,7 +27,10 @@ export class Roulette extends EventTarget {
   private _magnetized = new Map<number, { remaining: number; angle: number; angularSpeed: number }>();
   private _hunterMagnetized = new Map<number, { remaining: number; hunterId: string; angle: number; angularSpeed: number }>();
   private _magnetCooldown = new Map<number, number>();
+  private _pegBounceCooldown = new Map<number, number>();
   private _lastMagnetPulseAt = 0;
+  private _lastHunterPulseAt = new Map<string, number>();
+  private _pegBouncers: Array<{ x: number; y: number; radius: number }> = [];
   private _boosts: StageBoost[] = [];
   private _hunters: StageHunter[] = [];
   private _raceElapsed = 0;
@@ -119,7 +123,10 @@ export class Roulette extends EventTarget {
       while (this._elapsed >= this._updateInterval) {
         this._raceElapsed += this._updateInterval;
         this._updateMagnetCooldowns(this._updateInterval);
+        this._updatePegBounceCooldowns(this._updateInterval);
+        this._updateBoostRespawns(this._updateInterval);
         this._applyMagnetPulse();
+        this._applyHunterPulses();
         this.physics.step(interval);
         this._updateMarbles(this._updateInterval);
         this._particleManager.update(this._updateInterval);
@@ -139,6 +146,8 @@ export class Roulette extends EventTarget {
           needToZoom: this._goalDist < zoomThreshold,
           targetIndex: this._winners.length > 0 ? this._winnerRank - this._winners.length : 0,
           elapsedMs: this._raceElapsed,
+          winnerCount: this._winners.length,
+          requiredWinnerCount: this._winnerRank + 1,
         });
       }
 
@@ -167,6 +176,7 @@ export class Roulette extends EventTarget {
       this._applyGhostDash(marble);
       this._applyGoalMagnet(marble, deltaTime);
       this._applyHunterMagnet(marble, deltaTime, hunterStates);
+      this._applyPegBounce(marble);
 
       if (options.useSkills) {
         this._applyWallWind(marble, this._stage.windZones);
@@ -211,10 +221,24 @@ export class Roulette extends EventTarget {
       const radius = boost.radius + marble.size / 2;
       if (dx * dx + dy * dy <= radius * radius) {
         boost.consumed = true;
+        boost.respawnIn = 2000;
         this.physics.applyImpulse(marble.id, boost.impulse);
         marble.showBoost();
         this.dispatchEvent(new CustomEvent('message', { detail: `${marble.name} grabbed AI boost` }));
         break;
+      }
+    }
+  }
+
+  private _updateBoostRespawns(deltaTime: number) {
+    for (const boost of this._boosts) {
+      if (!boost.consumed) continue;
+      const next = (boost.respawnIn ?? 2000) - deltaTime;
+      if (next <= 0) {
+        boost.consumed = false;
+        boost.respawnIn = 0;
+      } else {
+        boost.respawnIn = next;
       }
     }
   }
@@ -314,6 +338,43 @@ export class Roulette extends EventTarget {
     }
   }
 
+  private _updatePegBounceCooldowns(deltaTime: number) {
+    for (const [id, remaining] of this._pegBounceCooldown.entries()) {
+      const next = remaining - deltaTime;
+      if (next <= 0) {
+        this._pegBounceCooldown.delete(id);
+      } else {
+        this._pegBounceCooldown.set(id, next);
+      }
+    }
+  }
+
+  private _applyPegBounce(marble: Marble) {
+    if (this._retiredIds.has(marble.id)) return;
+    if ((this._pegBounceCooldown.get(marble.id) ?? 0) > 0) return;
+    if (this._magnetized.has(marble.id) || this._hunterMagnetized.has(marble.id)) return;
+
+    for (const peg of this._pegBouncers) {
+      const dx = marble.x - peg.x;
+      const dy = marble.y - peg.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const triggerRadius = peg.radius + marble.size * 0.52 + 0.12;
+      if (dist > triggerRadius) continue;
+
+      const proximity = Math.max(0, triggerRadius - dist);
+      const unitX = dist === 0 ? (Math.random() > 0.5 ? 1 : -1) : dx / dist;
+      const unitY = dist === 0 ? -1 : dy / dist;
+      const power = 2.4 + proximity * 7.5;
+
+      this._pegBounceCooldown.set(marble.id, 130);
+      this.physics.applyImpulse(marble.id, {
+        x: unitX * power,
+        y: unitY * power - 0.15,
+      });
+      break;
+    }
+  }
+
   private _applyMagnetPulse() {
     if (!this._stage || !this._isRunning) return;
 
@@ -343,6 +404,53 @@ export class Roulette extends EventTarget {
     });
   }
 
+  private _applyHunterPulses() {
+    if (!this._isRunning || !options.useSkills) return;
+
+    const hunterStates = this.getHunterStates();
+
+    hunterStates.forEach((hunter) => {
+      if (hunter.mode !== 'magnet') return;
+      if (!hunter.pulseInterval || !hunter.pulseRadius || !hunter.pulseForce) return;
+      const pulseInterval = hunter.pulseInterval;
+      const pulseRadius = hunter.pulseRadius;
+      const pulseForce = hunter.pulseForce;
+
+      const lastPulseAt = this._lastHunterPulseAt.get(hunter.id) ?? 0;
+      if (this._raceElapsed - lastPulseAt < pulseInterval) {
+        return;
+      }
+
+      this._lastHunterPulseAt.set(hunter.id, this._raceElapsed);
+      this._effects.push(new SkillEffect(hunter.currentX, hunter.currentY));
+
+      this._marbles.forEach((marble) => {
+        if (this._retiredIds.has(marble.id)) return;
+
+        const dx = marble.x - hunter.currentX;
+        const dy = marble.y - hunter.currentY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > pulseRadius) return;
+
+        const attachedState = this._hunterMagnetized.get(marble.id);
+        if (attachedState?.hunterId === hunter.id) {
+          this._hunterMagnetized.delete(marble.id);
+        }
+
+        const fallbackAngle = attachedState?.angle ?? 0;
+        const unitX = dist === 0 ? Math.cos(fallbackAngle) : dx / dist;
+        const unitY = dist === 0 ? Math.sin(fallbackAngle) : dy / dist;
+
+        this._magnetCooldown.set(marble.id, 1600);
+        this.physics.setMarbleVelocity(marble.id, { x: 0, y: 0 });
+        this.physics.applyImpulse(marble.id, {
+          x: unitX * pulseForce,
+          y: unitY * pulseForce + 1.1,
+        });
+      });
+    });
+  }
+
   private _applyWallWind(marble: Marble, windZones: StageWindZone[]) {
     if (marble.isGhost) return;
     if (this._hunterMagnetized.has(marble.id)) return;
@@ -365,6 +473,7 @@ export class Roulette extends EventTarget {
   private _checkHunterCollision(marble: Marble, hunterStates: StageHunterState[]) {
     if (marble.isGhost) return;
     if (this._hunterMagnetized.has(marble.id)) return;
+    if ((this._magnetCooldown.get(marble.id) ?? 0) > 0) return;
     for (const hunter of hunterStates) {
       const dx = marble.x - hunter.currentX;
       const dy = marble.y - hunter.currentY;
@@ -456,6 +565,42 @@ export class Roulette extends EventTarget {
   private _updateEffects(deltaTime: number) {
     this._effects.forEach((effect) => effect.update(deltaTime));
     this._effects = this._effects.filter((effect) => !effect.isDestroy);
+  }
+
+  private _triggerStartBurst() {
+    if (this._marbles.length === 0) return;
+
+    const topY = Math.min(...this._marbles.map((marble) => marble.y));
+    const topRow = this._marbles.filter((marble) => Math.abs(marble.y - topY) <= 0.35);
+    if (topRow.length === 0) return;
+
+    const leftTop = topRow.reduce((best, marble) => (marble.x < best.x ? marble : best), topRow[0]);
+    const rightTop = topRow.reduce((best, marble) => (marble.x > best.x ? marble : best), topRow[0]);
+    const burstSources = [
+      { x: leftTop.x, y: leftTop.y - 0.9 },
+      ...(rightTop.id !== leftTop.id ? [{ x: rightTop.x, y: rightTop.y - 0.9 }] : []),
+    ];
+
+    burstSources.forEach((source) => {
+      this._effects.push(new SkillEffect(source.x, source.y));
+
+      this._marbles.forEach((marble) => {
+        const dx = marble.x - source.x;
+        const dy = marble.y - source.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const burstRadius = 4.4;
+        if (dist > burstRadius) return;
+
+        const unitX = dist === 0 ? (Math.random() > 0.5 ? 1 : -1) : dx / dist;
+        const unitY = dist === 0 ? 1 : dy / dist;
+        const power = Math.max(0.8, (1 - dist / burstRadius) * 4.8);
+
+        this.physics.applyImpulse(marble.id, {
+          x: unitX * power * 0.9,
+          y: unitY * power + 0.8,
+        });
+      });
+    });
   }
 
   private getHunterStates(): StageHunterState[] {
@@ -571,6 +716,13 @@ export class Roulette extends EventTarget {
     }
 
     this.physics.createStage(this._stage);
+    this._pegBouncers = this._stage.entities
+      .filter((entity): entity is typeof entity & { shape: EntityCircleShape } => entity.shape.type === 'circle')
+      .map((entity) => ({
+        x: entity.position.x,
+        y: entity.position.y,
+        radius: entity.shape.radius,
+      }));
     const interactives = this._stage.createInteractives();
     this._boosts = interactives.boosts;
     this._hunters = interactives.hunters;
@@ -586,7 +738,9 @@ export class Roulette extends EventTarget {
     this._magnetized.clear();
     this._hunterMagnetized.clear();
     this._magnetCooldown.clear();
+    this._pegBounceCooldown.clear();
     this._lastMagnetPulseAt = 0;
+    this._lastHunterPulseAt.clear();
     this._marbles = [];
   }
 
@@ -603,11 +757,14 @@ export class Roulette extends EventTarget {
     this._magnetized.clear();
     this._hunterMagnetized.clear();
     this._magnetCooldown.clear();
+    this._pegBounceCooldown.clear();
     this._lastMagnetPulseAt = 0;
+    this._lastHunterPulseAt.clear();
     this._raceElapsed = 0;
     this._targetUnreachableAnnounced = false;
     this._boosts.forEach((boost) => {
       boost.consumed = false;
+      boost.respawnIn = 0;
     });
     this._camera.startFollowingMarbles();
 
@@ -615,10 +772,12 @@ export class Roulette extends EventTarget {
       this._recorder.start().then(() => {
         this.physics.start();
         this._marbles.forEach((marble) => (marble.isActive = true));
+        this._triggerStartBurst();
       });
     } else {
       this.physics.start();
       this._marbles.forEach((marble) => (marble.isActive = true));
+      this._triggerStartBurst();
     }
   }
 
@@ -727,6 +886,7 @@ export class Roulette extends EventTarget {
     this._marbles = [];
     this._boosts = [];
     this._hunters = [];
+    this._pegBouncers = [];
   }
 
   public reset() {

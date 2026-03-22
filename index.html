@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Neon Drop</title>
+  <title>AX roulette</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="A long neon race track with boost bubbles and roaming hazard hunters.">
   <link rel="apple-touch-icon" sizes="57x57" href="assets/apple-icon-57x57.png">
@@ -15,10 +15,8 @@
   <link rel="apple-touch-icon" sizes="144x144" href="assets/apple-icon-144x144.png">
   <link rel="apple-touch-icon" sizes="152x152" href="assets/apple-icon-152x152.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-icon-180x180.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/android-icon-192x192.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="96x96" href="assets/favicon-96x96.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="icon" type="image/png" href="./favicon.png">
+  <link rel="shortcut icon" href="./favicon.png">
   <link rel="manifest" href="assets/manifest.json">
   <meta name="theme-color" content="#08111d">
   <link rel="stylesheet" href="assets/style.scss">
@@ -125,7 +123,39 @@
 
     const saved = localStorage.getItem('neon_drop_names');
     document.querySelector('#in_names').value =
-      saved || 'Soyeon\nMinji\nAri\nTheo\nLuca\nYuri\nNina\nEvan';
+      saved ||
+      [
+        '김민준', '이서준', '박예준', '최도윤', '정시우', '강하준', '조주원', '윤지호', '장지후', '임준우',
+        '한준서', '오건우', '서현우', '신유준', '권우진', '황도현', '안민재', '송유찬', '전진우', '홍은우',
+        '유선우', '고준희', '문윤우', '양정우', '손승우', '배승민', '백지민', '허지훈', '남수호', '심서진',
+        '노하진', '하명준', '곽도하', '성은찬', '차성준', '우우빈', '구정민', '나민혁', '임지원', '민태윤',
+        '지하민', '신지한', '박시후', '이민규', '김지성', '최성현', '정연우', '강재원', '조정현', '윤승현',
+        '장태준', '임현준', '한윤호', '오찬열', '서경준', '신준호', '권태민', '황시윤', '안재혁', '송동현',
+        '전성민', '홍준혁', '유준영', '고정훈', '문승준', '양민성', '손상우', '배수현', '백하람', '허강준',
+        '남동욱', '심재희', '노규민', '윤윤성', '하태경', '곽은결', '성민호', '차서후', '우주현', '구재현',
+        '나하윤', '임원준', '민민수', '지지오', '신도진', '박우준', '이태웅', '김승재', '최준기', '정용준',
+        '강시현', '조은호', '윤도원', '장범준', '임성진', '한정빈', '오승환', '서찬우', '신민찬', '권희준',
+        '서윤', '이서연', '박지우', '최하윤', '정민서', '강하은', '조지유', '윤윤서', '장지아', '임나은',
+        '한채원', '오수아', '서지민', '신다은', '권예은', '황서현', '안소윤', '송하린', '전예린', '홍지윤',
+        '유서아', '고소이', '문화율', '양민지', '손지원', '배채윤', '백유주', '허지안', '남희주', '심수빈',
+        '노아인', '하설아', '곽예서', '성서율', '차주아', '우예진', '구가은', '나나윤', '임유나', '민유진',
+        '지소율', '신민채', '박서은', '이채아', '김지효', '최윤아', '정서하', '강하영', '조소은', '윤하온',
+        '장소연', '임가윤', '한시연', '오은서', '서은비', '신연서', '권채은', '황지수', '안보미', '송다인',
+        '전수민', '홍다윤', '유예나', '고서희', '문지율', '양예지', '손수연', '배연우', '백서영', '허민주',
+        '남다희', '심하은', '노아윤', '하소은', '곽혜원', '성주은', '차유이', '우리안', '구수정', '나민하',
+        '임아라', '민시은', '지소명', '신정윤', '박세아', '이은채', '김민정', '최재인', '정규리', '강희서',
+        '조효주', '윤리아', '장나경', '임윤하', '한은수', '어서빈', '신소담', '권해인', '황시아', '안윤주',
+        '김도경', '이태희', '박지성', '최동욱', '정수진', '강민호', '조하람', '윤지후', '장재하', '임소윤',
+        '한지온', '오서진', '서준영', '신하준', '권민우', '황유준', '안서준', '송지호', '전현우', '홍지민',
+        '유예원', '고지우', '문다현', '양하윤', '손채원', '배서현', '백하은', '허민준', '남지유', '심서우',
+        '노주원', '하연우', '곽지안', '성서윤', '차예준', '우도윤', '구서연', '나하준', '임시우', '민지후',
+        '지준우', '신민서', '박채아', '이지아', '김나은', '최은우', '정수아', '강준서', '조지윤', '윤예은',
+        '장소율', '임예진', '한현준', '오도현', '서유준', '신우진', '권민재', '황유찬', '안은우', '송선우',
+        '전준희', '홍정우', '유승우', '고수호', '문하진', '양성준', '손우빈', '배정민', '백태윤', '허하민',
+        '남지한', '심시후', '노민규', '하성현', '곽재원', '성태준', '차윤호', '우경준', '구준호', '나태민',
+        '임시윤', '민재혁', '지동현', '신성민', '박준혁', '이준영', '김정훈', '최승준', '정민성', '강상우',
+        '조수현', '윤강준', '장동욱', '임재희', '한규민', '오태경', '서은결', '신민호', '권서후', '황주현',
+      ].join('\n');
 
     const maps = window.roulette.getMaps();
     const mapSelector = document.querySelector('#sltMap');
@@ -189,8 +219,8 @@
 <div id="controlPanel" class="control-panel">
   <div class="panel-head">
     <div>
-      <p class="eyebrow">TRON Circuit</p>
-      <h1>Neon Drop</h1>
+      <p class="eyebrow">Neon Drop</p>
+      <h1>AX roulette</h1>
     </div>
     <div class="roster-pill">
       <span>Roster</span>

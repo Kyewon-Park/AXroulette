@@ -112,7 +112,7 @@ export class RouletteRenderer {
       this.renderWindZones(renderParameters.stage.windZones);
       this.renderBoosts(renderParameters);
       this.renderHunters(renderParameters);
-      this.renderGoalMagnet(renderParameters.stage);
+      this.renderGoalMagnet(renderParameters);
       this.renderEffects(renderParameters);
       this.renderMarbles(renderParameters);
       this.renderGoalBanner(renderParameters.stage);
@@ -224,10 +224,11 @@ export class RouletteRenderer {
     this.ctx.restore();
   }
 
-  private renderGoalMagnet(stage: StageDef) {
+  private renderGoalMagnet({ stage, camera }: Pick<RenderParameters, 'stage' | 'camera'>) {
     const magnet = stage.magnet;
     const pulse = 0.12 * Math.sin(Date.now() / 180);
     const radius = magnet.radius + pulse;
+    const zoom = camera.zoom * initialZoom;
 
     this.ctx.save();
     this.ctx.strokeStyle = 'rgba(255, 120, 120, 0.9)';
@@ -267,7 +268,38 @@ export class RouletteRenderer {
     this.ctx.beginPath();
     this.ctx.arc(magnet.x, magnet.y, radius, 0, Math.PI * 2);
     this.ctx.stroke();
+    this.renderOrbitIcons(magnet.x, magnet.y, magnet.triggerRadius + 0.72, 6, zoom, '#fff3f3', '🧲');
     this.ctx.restore();
+  }
+
+  private renderOrbitIcons(
+    x: number,
+    y: number,
+    ringRadius: number,
+    count: number,
+    zoom: number,
+    color: string,
+    icon: string
+  ) {
+    for (let index = 0; index < count; index++) {
+      const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
+      const iconX = x + Math.cos(angle) * ringRadius;
+      const iconY = y + Math.sin(angle) * ringRadius;
+
+      this.ctx.save();
+      this.ctx.translate(iconX, iconY);
+      this.ctx.rotate(angle + Math.PI * 1.5);
+      this.ctx.scale(1 / zoom, 1 / zoom);
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.font = '700 16px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeStyle = 'rgba(36, 16, 16, 0.88)';
+      this.ctx.fillStyle = color;
+      this.ctx.strokeText(icon, 0, 0);
+      this.ctx.fillText(icon, 0, 0);
+      this.ctx.restore();
+    }
   }
 
   private createBossBadge(): CanvasImageSource {
@@ -405,6 +437,28 @@ export class RouletteRenderer {
     const zoom = camera.zoom * initialZoom;
     hunters.forEach((hunter) => {
       this.ctx.save();
+      if (hunter.mode === 'magnet') {
+        this.ctx.strokeStyle = `${hunter.color}80`;
+        this.ctx.lineWidth = 0.08;
+        this.ctx.shadowBlur = 18;
+        this.ctx.shadowColor = hunter.color;
+        this.ctx.beginPath();
+        this.ctx.arc(hunter.currentX, hunter.currentY, hunter.magnetRange, 0, Math.PI * 2);
+        this.ctx.stroke();
+        this.renderOrbitIcons(
+          hunter.currentX,
+          hunter.currentY,
+          hunter.magnetRange + 0.48,
+          4,
+          zoom,
+          '#fff6d5',
+          '🧲'
+        );
+      }
+      if (hunter.mode === 'retire') {
+        this.renderOrbitIcons(hunter.currentX, hunter.currentY, hunter.radius + 0.54, 3, zoom, '#fff1f1', '☠️');
+      }
+
       this.ctx.fillStyle = `${hunter.color}4d`;
       this.ctx.strokeStyle = hunter.color;
       this.ctx.shadowBlur = 22;
