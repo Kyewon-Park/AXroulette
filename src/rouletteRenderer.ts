@@ -502,25 +502,31 @@ export class RouletteRenderer {
     });
   }
 
-  private renderWinner({ winner, theme }: RenderParameters) {
-    if (!winner) return;
+  private renderWinner({ winner, winners, winnerRank, theme }: RenderParameters) {
+    if (!winner && winners.length === 0) return;
+    const lockedWinners = winners.slice(0, Math.min(winners.length, winnerRank + 1));
+    if (lockedWinners.length === 0) return;
+    const displayedWinner = lockedWinners[lockedWinners.length - 1];
+
+    const panelHeight = 112;
+    const panelY = this._canvas.height - panelHeight - 20;
     this.ctx.save();
     this.ctx.fillStyle = theme.winnerBackground;
     this.ctx.strokeStyle = theme.accent;
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    this.ctx.roundRect(this._canvas.width - 340, this._canvas.height - 132, 320, 112, 18);
+    this.ctx.roundRect(this._canvas.width - 340, panelY, 320, panelHeight, 18);
     this.ctx.fill();
     this.ctx.stroke();
 
     this.ctx.textAlign = 'left';
     this.ctx.fillStyle = '#fff4dc';
     this.ctx.font = '700 18px "Trebuchet MS", sans-serif';
-    this.ctx.fillText('Winner Locked', this._canvas.width - 320, this._canvas.height - 96);
+    this.ctx.fillText('Winner Locked', this._canvas.width - 320, panelY + 24);
 
-    this.ctx.font = '800 34px "Trebuchet MS", sans-serif';
-    this.ctx.fillStyle = `hsl(${winner.hue} 100% ${theme.marbleLightness}%)`;
-    this.ctx.fillText(winner.name, this._canvas.width - 320, this._canvas.height - 54);
+    this.ctx.font = '800 30px "Trebuchet MS", sans-serif';
+    this.ctx.fillStyle = `hsl(${displayedWinner.hue} 100% ${theme.marbleLightness}%)`;
+    this.ctx.fillText(`${lockedWinners.length}. ${displayedWinner.name}`, this._canvas.width - 320, panelY + 78);
     this.ctx.restore();
   }
 }

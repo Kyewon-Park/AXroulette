@@ -219,14 +219,84 @@ function createChevronGrid(startY: number, rows: number, gap: number, colorA: st
   return entities;
 }
 
-function createPegField(startY: number, rows: number, gapY: number, color: string): MapEntity[] {
+function createScatterSlantedBars(
+  entries: Array<[number, number, number, number, string]>
+): MapEntity[] {
+  return entries.map(([x, y, width, rotation, color]) => staticBox(x, y, width, 0.14, rotation, color, 0.42));
+}
+
+function createFunnelBars(
+  centerX: number,
+  centerY: number,
+  width: number,
+  colorA: string,
+  colorB: string
+): MapEntity[] {
+  return [
+    staticBox(centerX - 5.9, centerY, width, 0.16, 0.48, colorA, 0.52),
+    staticBox(centerX + 5.9, centerY, width, 0.16, -0.48, colorB, 0.52),
+  ];
+}
+
+function createWideWallFunnelBars(
+  centerX: number,
+  centerY: number,
+  width: number,
+  colorA: string,
+  colorB: string
+): MapEntity[] {
+  return [
+    staticBox(centerX - 8.6, centerY, width, 0.16, 0.34, colorA, 0.56),
+    staticBox(centerX + 8.6, centerY, width, 0.16, -0.34, colorB, 0.56),
+  ];
+}
+
+function createUpFunnelBars(
+  apexX: number,
+  apexY: number,
+  width: number,
+  colorA: string,
+  colorB: string
+): MapEntity[] {
+  const angle = 0.62;
+  const offsetX = Math.cos(angle) * width;
+  const offsetY = Math.sin(angle) * width;
+  return [
+    staticBox(apexX - offsetX, apexY + offsetY, width, 0.16, -angle, colorA, 0.52),
+    staticBox(apexX + offsetX, apexY + offsetY, width, 0.16, angle, colorB, 0.52),
+  ];
+}
+
+function createPegField(
+  startY: number,
+  rows: number,
+  gapY: number,
+  color: string,
+  seedOffset = 0,
+  blockedYRanges: Array<[number, number]> = []
+): MapEntity[] {
   const pegs: MapEntity[] = [];
+  const hash = (value: number) => {
+    const x = Math.sin(value * 12.9898 + startY * 0.173 + seedOffset * 1.917) * 43758.5453;
+    return x - Math.floor(x);
+  };
+
+  let previousX = 13;
   for (let row = 0; row < rows; row++) {
     const y = startY + row * gapY;
-    const offset = row % 2 === 0 ? 0 : 1.3;
-    for (let x = 6 + offset; x <= 20; x += 2.6) {
-      pegs.push(peg(x, y, 0.22, color));
+    if (blockedYRanges.some(([from, to]) => y >= from && y <= to)) {
+      continue;
     }
+    let x = 6.8 + hash(row + 1) * 12.4;
+    const distanceFromPrevious = Math.abs(x - previousX);
+
+    if (distanceFromPrevious < 1.35) {
+      x += x < 13 ? -1.8 : 1.8;
+    }
+
+    x = Math.max(6.4, Math.min(19.6, x));
+    previousX = x;
+    pegs.push(peg(x, y, 0.22, color));
   }
   return pegs;
 }
@@ -282,7 +352,7 @@ function createWallWindZones(startY: number, rows: number, gapY: number): StageW
       width: 3.6,
       height: 10,
       direction: 'right',
-      strength: 1.7 + (row % 3) * 0.18,
+      strength: (1.7 + (row % 3) * 0.18) * 2,
       color: 'rgba(116, 239, 255, 0.26)',
     });
     zones.push({
@@ -292,7 +362,7 @@ function createWallWindZones(startY: number, rows: number, gapY: number): StageW
       width: 3.6,
       height: 10,
       direction: 'left',
-      strength: 1.7 + ((row + 1) % 3) * 0.18,
+      strength: (1.7 + ((row + 1) % 3) * 0.18) * 2,
       color: 'rgba(255, 178, 110, 0.22)',
     });
   }
@@ -301,7 +371,7 @@ function createWallWindZones(startY: number, rows: number, gapY: number): StageW
 
 function createInteractives(topY: number, goalY: number, hunterOffset = 0): StageInteractives {
   const boosts: StageBoost[] = [];
-  const hunterRows = [64, 94, 124, 156, 188, 218];
+  const hunterRows = [64, 94, 102, 132, 156, 166, 188, 212];
   for (let index = 0; index < 22; index++) {
     const y = 24 + Math.random() * (goalY - 48);
     const x = 5.3 + Math.random() * 15.4;
@@ -332,10 +402,12 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
   }> = [
     { label: '현업1', x: 11.0, y: hunterRows[0] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.2, speed: 1.15, phase: 0 },
     { label: '현업2', x: 14.8, y: hunterRows[1] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'y', amplitude: 3.5, speed: 1.35, phase: Math.PI * 0.2 },
-    { label: '현업3', x: 12.0, y: hunterRows[2] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 5.4, speed: 1.5, phase: Math.PI * 0.45 },
-    { label: '현업4', x: 15.2, y: hunterRows[3] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'y', amplitude: 3.3, speed: 1.28, phase: Math.PI * 0.7 },
-    { label: '현업5', x: 10.8, y: hunterRows[4] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.0, speed: 1.6, phase: Math.PI * 0.95 },
-    { label: '현업6', x: 14.6, y: hunterRows[5] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'y', amplitude: 3.8, speed: 1.82, phase: Math.PI * 1.18 },
+    { label: '현업3', x: 13.0, y: hunterRows[2] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.4, speed: 1.42, phase: Math.PI * 0.32 },
+    { label: '현업4', x: 12.0, y: hunterRows[3] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 5.4, speed: 1.5, phase: Math.PI * 0.45 },
+    { label: '현업5', x: 15.2, y: hunterRows[4] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'y', amplitude: 3.3, speed: 1.28, phase: Math.PI * 0.7 },
+    { label: '현업6', x: 13.2, y: hunterRows[5] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.1, speed: 1.56, phase: Math.PI * 0.88 },
+    { label: '현업7', x: 10.8, y: hunterRows[6] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.0, speed: 1.6, phase: Math.PI * 0.95 },
+    { label: '현업8', x: 14.6, y: hunterRows[7] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'x', amplitude: 3.8, speed: 1.82, phase: Math.PI * 1.18 },
   ];
 
   const hunters: StageHunter[] = hunterDefs.map((hunter, index) => ({
@@ -385,19 +457,41 @@ function createManualWorkCourse(): StageDef {
     entities: [
       ...createFrame(topY, goalY, '#74dfff'),
       ...createSideRails(topY + 16, goalY - 8),
-      ...createChevronGrid(18, 12, 16, '#7af0ff', '#ffb26e'),
+      ...createScatterSlantedBars([
+        [8.5, 34, 1.8, 0.62, '#7af0ff'],
+        [13.2, 40, 1.7, -0.44, '#ffcf93'],
+        [17.1, 46, 1.55, -0.74, '#ffb26e'],
+        [6.9, 52, 1.9, 0.86, '#7af0ff'],
+        [11.2, 58, 1.7, -0.58, '#ffd59a'],
+        [19.1, 64, 1.65, 0.72, '#ffb26e'],
+        [15.9, 72, 1.85, 0.86, '#7af0ff'],
+        [9.5, 79, 1.7, 0.48, '#ffcf93'],
+        [7.6, 88, 1.6, -0.72, '#ffb26e'],
+        [17.1, 126, 1.8, -0.82, '#7af0ff'],
+        [14.8, 136, 1.7, -0.92, '#7af0ff'],
+        [8.2, 145, 1.95, 0.68, '#ffd59a'],
+        [18.8, 161, 1.7, -0.58, '#7af0ff'],
+        [17.8, 171, 1.8, -0.64, '#7af0ff'],
+        [12.8, 179, 1.85, 0.47, '#ffcf93'],
+        [11.6, 189, 2.0, 0.58, '#ffd59a'],
+      ]),
+      ...createFunnelBars(13, 108, 5.1, '#ffbe7a', '#76efff'),
+      ...createUpFunnelBars(13, 118, 4.8, '#76efff', '#ffbe7a'),
+      ...rotor(9.2, 95, 1.15, 2.05, '#ffcf93', '#76efff'),
+      ...rotor(16.8, 95, 1.15, -2.05, '#76efff', '#ffcf93'),
+      ...rotor(10.1, 122, 1.05, -1.9, '#ffb26e', '#7af0ff'),
+      ...rotor(15.9, 122, 1.05, 1.9, '#7af0ff', '#ffb26e'),
+      ...createFunnelBars(13, 172, 5.1, '#ffbe7a', '#76efff'),
+      ...createWideWallFunnelBars(13, 208, 7.6, '#ffcf93', '#76efff'),
       ...createWallSpinners(36, 8, 24),
-      ...createPegField(26, 13, 14, '#a7f6ff'),
+      ...createPegField(24, 63, 10 / 3, '#a7f6ff', 0, [[96, 126], [160, 186], [196, 224]]),
+      ...createPegField(25.7, 54, 10 / 3, '#dffcff', 1, [[96, 126], [160, 186], [196, 224]]),
       ...createChaosField([
         [9.2, 52, 1.5, 0.14, 1.05, '#ffb26e'],
         [16.8, 66, 1.2, 0.14, -0.88, '#74efff'],
         [11.7, 84, 0.9, 0.14, -0.42, '#ffcf93'],
-        [14.1, 95, 1.6, 0.14, 0.98, '#74efff'],
-        [8.9, 118, 1.1, 0.14, -1.12, '#ffb26e'],
         [17.1, 131, 1.4, 0.14, 0.56, '#74efff'],
         [10.5, 158, 1.3, 0.14, 0.84, '#ffb26e'],
-        [15.6, 173, 1.0, 0.14, -0.76, '#74efff'],
-        [12.4, 194, 1.8, 0.14, 0.24, '#ffcf93'],
       ]),
       ...createBumperGate(62, '#ffb26e', false),
       ...createBumperGate(156, '#ffb26e', false),
@@ -420,7 +514,8 @@ function createEfficiencyBoostCourse(): StageDef {
     ...createFrame(topY, goalY, accent),
     ...createSideRails(topY + 18, goalY - 10),
     ...createWallSpinners(34, 9, 23),
-    ...createPegField(18, 15, 15, '#8cecff'),
+    ...createPegField(18, 72, 10 / 3, '#8cecff', 0, [[108, 138]]),
+    ...createPegField(19.7, 62, 10 / 3, '#d7fbff', 1, [[108, 138]]),
     ...createChaosField([
       [8.6, 58, 1.2, 0.14, -1.06, '#ffb26e'],
       [17.3, 72, 1.1, 0.14, 0.88, '#79efff'],
@@ -438,6 +533,26 @@ function createEfficiencyBoostCourse(): StageDef {
     entities.push(box(openLeft ? 18.2 : 7.8, y, 3.4, 0.15, openLeft ? -0.38 : 0.38, '#ffb26e'));
     entities.push(box(openLeft ? 8.2 : 17.8, y + 6.5, 2.1, 0.12, openLeft ? 0.55 : -0.55, '#79efff'));
   }
+
+  entities.push(
+    ...createScatterSlantedBars([
+      [8.4, 44, 1.85, 0.68, '#ffb26e'],
+      [13.5, 52, 1.7, -0.42, '#ffd49f'],
+      [16.5, 61, 1.65, -0.76, '#79efff'],
+      [7.2, 68, 1.95, 0.86, '#ffb26e'],
+      [11.3, 78, 1.8, 0.54, '#ffd49f'],
+      [18.5, 86, 1.7, -0.62, '#79efff'],
+      [14.7, 132, 1.7, -0.66, '#79efff'],
+      [6.9, 142, 1.9, 0.74, '#ffb26e'],
+      [10.1, 152, 1.85, 0.82, '#ffd49f'],
+      [17.9, 160, 1.7, -0.52, '#79efff'],
+      [12.6, 181, 1.95, 0.61, '#ffd49f'],
+      [9.4, 221, 1.85, 0.58, '#ffd49f'],
+    ])
+  );
+  entities.push(...createFunnelBars(13, 120, 5.3, '#ffbe7a', '#79efff'));
+  entities.push(...createFunnelBars(13, 176, 5.3, '#ffbe7a', '#79efff'));
+  entities.push(...createWideWallFunnelBars(13, 218, 7.8, '#ffcf93', '#79efff'));
 
   entities.push(spinner(9.2, 112, 2.8, 0.2, 2.2, '#ff8e4d'));
   entities.push(spinner(16.8, 150, 2.8, -0.2, -2.1, '#79efff'));
