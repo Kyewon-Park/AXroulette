@@ -1,5 +1,5 @@
 {
-  "last_turn_at": "2026-03-22T05:58:43.751Z",
-  "turn_count": 106,
-  "last_agent_output": "커밋 메시지:\n`feat: refine map hazards, winner UI, and camera behavior`\n\n커밋 디스크립션:\n```text\n- add and tune"
+  "last_turn_at": "2026-03-22T06:02:24.332Z",
+  "turn_count": 109,
+  "last_agent_output": "이렇게 하면 됩니다. `gh-pages` 없이 가는 방향으로 워크플로우를 바꿔뒀습니다.\n\n변경 내용:\n- [deploy.yml](C:/Users/pkw3136/Documents/G"
 }
