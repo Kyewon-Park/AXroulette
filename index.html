@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang=en><script type=importmap>{"imports":{"2rDQN":"./Box2D.simd.dd31b167.wasm","8BShk":"./Box2D.simd.13a3a125.js","9ckAG":"./ceo.323dcafa.png","h7cmx":"./Box2D.b9b16b27.wasm","ilUZb":"./Box2D.4b04ba8e.js","juMvj":"./ff.7fdc9e82.svg"}}</script><meta charset=UTF-8><meta http-equiv=X-UA-Compatible content="ie=edge"><title>AX roulette</title><meta name=viewport content="width=device-width, initial-scale=1.0"><meta name=description content="A long neon race track with boost bubbles and roaming hazard hunters."><link rel=apple-touch-icon sizes=57x57 href=apple-icon-57x57.5ecd1650.png><link rel=apple-touch-icon sizes=60x60 href=apple-icon-60x60.b46a75af.png><link rel=apple-touch-icon sizes=72x72 href=apple-icon-72x72.4726ed35.png><link rel=apple-touch-icon sizes=76x76 href=apple-icon-76x76.72dbc1e1.png><link rel=apple-touch-icon sizes=114x114 href=apple-icon-114x114.6cefcd75.png><link rel=apple-touch-icon sizes=120x120 href=apple-icon-120x120.462d8e84.png><link rel=apple-touch-icon sizes=144x144 href=apple-icon-144x144.36ef70f8.png><link rel=apple-touch-icon sizes=152x152 href=apple-icon-152x152.1f1d2b56.png><link rel=apple-touch-icon sizes=180x180 href=apple-icon-180x180.33666671.png><link rel=icon type=image/png href=favicon.af2c9b11.png><link rel="icon shortcut" href=favicon.af2c9b11.png><link rel=manifest href=assets/manifest.webmanifest><meta name=theme-color content=#08111d><link rel=stylesheet href=AXroulette.e7487614.css><body>
+<script type=module src=AXroulette.ba52a383.js></script>
+<script>function getNames(){return document.querySelector("#in_names").value.trim().split(/[,\r\n]/g).map(n=>n.trim()).filter(n=>!!n)}function parseName(n){let e=/(\/\d+)/,t=/(\*\d+)/,o=e.test(n),a=t.test(n),r=/^\s*([^\/*]+)?/.exec(n)[1];return{name:r,weight:o?parseInt(e.exec(n)[1].replace("/",""),10):1,count:a?parseInt(t.exec(n)[1].replace("*",""),10):1}}let ready=!1;function setStatus(n){document.querySelector("#statusLine").textContent=n}function normalizeNames(){let n=getNames(),e=new Set,t={};n.forEach(n=>{let o=parseName(n),a=o.weight>1?`${o.name}/${o.weight}`:o.name;e.has(a)||(e.add(a),t[a]=0),t[a]+=o.count});let o=[];Object.keys(t).forEach(n=>{t[n]>1?o.push(`${n}*${t[n]}`):o.push(n)}),document.querySelector("#in_names").value=o.join(",")}function syncRoster(){let n=getNames();window.roulette.setMarbles(n),ready=n.length>0,localStorage.setItem("neon_drop_names",n.join(","));let e=window.roulette.getCount(),t=document.querySelector("#in_winningRank"),o=parseInt(t.value,10),a=Math.max(1,Math.min(e||1,isNaN(o)?1:o));t.value=a,window.options.winningRank=a-1,window.roulette.setWinningRank(window.options.winningRank),document.querySelector("#rosterCount").textContent=`${e}`,document.querySelector("#courseName").textContent=window.roulette.getStageInfo().title,setStatus(ready?`Roster synced. ${e} marbles loaded.`:"Add names to arm the race.")}function hidePanel(){document.body.classList.add("race-live")}function showPanel(){document.body.classList.remove("race-live")}function initialize(){if(!window.roulette||!window.roulette.isReady)return void setTimeout(initialize,100);let n=localStorage.getItem("neon_drop_names");document.querySelector("#in_names").value=n||"김민준\n이서준\n박예준\n최도윤\n정시우\n강하준\n조주원\n윤지호\n장지후\n임준우\n한준서\n오건우\n서현우\n신유준\n권우진\n황도현\n안민재\n송유찬\n전진우\n홍은우\n유선우\n고준희\n문윤우\n양정우\n손승우\n배승민\n백지민\n허지훈\n남수호\n심서진\n노하진\n하명준\n곽도하\n성은찬\n차성준\n우우빈\n구정민\n나민혁\n임지원\n민태윤\n지하민\n신지한\n박시후\n이민규\n김지성\n최성현\n정연우\n강재원\n조정현\n윤승현\n장태준\n임현준\n한윤호\n오찬열\n서경준\n신준호\n권태민\n황시윤\n안재혁\n송동현\n전성민\n홍준혁\n유준영\n고정훈\n문승준\n양민성\n손상우\n배수현\n백하람\n허강준\n남동욱\n심재희\n노규민\n윤윤성\n하태경\n곽은결\n성민호\n차서후\n우주현\n구재현\n나하윤\n임원준\n민민수\n지지오\n신도진\n박우준\n이태웅\n김승재\n최준기\n정용준\n강시현\n조은호\n윤도원\n장범준\n임성진\n한정빈\n오승환\n서찬우\n신민찬\n권희준\n서윤\n이서연\n박지우\n최하윤\n정민서\n강하은\n조지유\n윤윤서\n장지아\n임나은\n한채원\n오수아\n서지민\n신다은\n권예은\n황서현\n안소윤\n송하린\n전예린\n홍지윤\n유서아\n고소이\n문화율\n양민지\n손지원\n배채윤\n백유주\n허지안\n남희주\n심수빈\n노아인\n하설아\n곽예서\n성서율\n차주아\n우예진\n구가은\n나나윤\n임유나\n민유진\n지소율\n신민채\n박서은\n이채아\n김지효\n최윤아\n정서하\n강하영\n조소은\n윤하온\n장소연\n임가윤\n한시연\n오은서\n서은비\n신연서\n권채은\n황지수\n안보미\n송다인\n전수민\n홍다윤\n유예나\n고서희\n문지율\n양예지\n손수연\n배연우\n백서영\n허민주\n남다희\n심하은\n노아윤\n하소은\n곽혜원\n성주은\n차유이\n우리안\n구수정\n나민하\n임아라\n민시은\n지소명\n신정윤\n박세아\n이은채\n김민정\n최재인\n정규리\n강희서\n조효주\n윤리아\n장나경\n임윤하\n한은수\n어서빈\n신소담\n권해인\n황시아\n안윤주\n김도경\n이태희\n박지성\n최동욱\n정수진\n강민호\n조하람\n윤지후\n장재하\n임소윤\n한지온\n오서진\n서준영\n신하준\n권민우\n황유준\n안서준\n송지호\n전현우\n홍지민\n유예원\n고지우\n문다현\n양하윤\n손채원\n배서현\n백하은\n허민준\n남지유\n심서우\n노주원\n하연우\n곽지안\n성서윤\n차예준\n우도윤\n구서연\n나하준\n임시우\n민지후\n지준우\n신민서\n박채아\n이지아\n김나은\n최은우\n정수아\n강준서\n조지윤\n윤예은\n장소율\n임예진\n한현준\n오도현\n서유준\n신우진\n권민재\n황유찬\n안은우\n송선우\n전준희\n홍정우\n유승우\n고수호\n문하진\n양성준\n손우빈\n배정민\n백태윤\n허하민\n남지한\n심시후\n노민규\n하성현\n곽재원\n성태준\n차윤호\n우경준\n구준호\n나태민\n임시윤\n민재혁\n지동현\n신성민\n박준혁\n이준영\n김정훈\n최승준\n정민성\n강상우\n조수현\n윤강준\n장동욱\n임재희\n한규민\n오태경\n서은결\n신민호\n권서후\n황주현";let e=window.roulette.getMaps(),t=document.querySelector("#sltMap");e.forEach(n=>{let e=document.createElement("option");e.value=n.index,e.textContent=n.title,t.append(e)}),t.addEventListener("change",n=>{window.roulette.setMap(parseInt(n.target.value,10)),syncRoster()}),document.querySelector("#in_names").addEventListener("blur",()=>{normalizeNames(),syncRoster()}),document.querySelector("#btnPrime").addEventListener("click",()=>{normalizeNames(),syncRoster()}),document.querySelector("#btnStart").addEventListener("click",()=>{ready&&(window.roulette.start(),hidePanel(),setStatus("Race live. Control panel hidden until target rank locks."))}),document.querySelector("#chkSkill").addEventListener("change",n=>{window.options.useSkills=n.target.matches(":checked"),setStatus(window.options.useSkills?"AI boosts and hunter hazards enabled.":"Bonus items disabled.")}),document.querySelector("#in_winningRank").addEventListener("change",n=>{let e=parseInt(n.target.value,10),t=Math.max(1,Math.min(Math.max(window.roulette.getCount(),1),isNaN(e)?1:e));n.target.value=t,window.options.winningRank=t-1,window.roulette.setWinningRank(window.options.winningRank)}),window.roulette.addEventListener("goal",n=>{ready=!1,setStatus(`${n.detail.winner} locked the target rank. Panel restored.`),setTimeout(showPanel,1200)}),window.roulette.addEventListener("message",n=>{setStatus(n.detail)}),syncRoster()}window.addEventListener("error",n=>{console.error("[window.error]",n.error||n.message),setStatus(`JS error: ${n.message}`)}),window.addEventListener("unhandledrejection",n=>{console.error("[unhandledrejection]",n.reason);let e=n.reason instanceof Error?n.reason.message:String(n.reason);setStatus(`Promise error: ${e}`)}),document.addEventListener("DOMContentLoaded",()=>{initialize()});</script>
+
+<div id=controlPanel class=control-panel>
+  <div class=panel-head>
+    <div>
+      <p class=eyebrow>Neon Drop</p>
+      <h1>AX roulette</h1>
+    </div>
+    <div class=roster-pill>
+      <span>Roster</span>
+      <strong id=rosterCount>0</strong>
+    </div>
+  </div>
+
+  <div class=field-grid>
+    <label class=field>
+      <span>Course</span>
+      <select id=sltMap></select>
+    </label>
+    <label class=field>
+      <span>Winner Rank</span>
+      <input type=number id=in_winningRank value=1 min=1>
+    </label>
+  </div>
+
+  <label class=toggle>
+    <span>AI bubbles + 현업/사장님</span>
+    <input type=checkbox id=chkSkill checked>
+  </label>
+
+  <label class=field>
+    <span>Roster Input</span>
+    <textarea id=in_names placeholder="One name per line or comma separated"></textarea>
+  </label>
+
+  <div class=actions>
+    <button id=btnPrime class="btn ghost">Sync</button>
+    <button id=btnStart class="btn primary">Start Race</button>
+  </div>
+
+  <div class=status-box>
+    <span id=courseName>Manual Work</span>
+    <p id=statusLine>Waiting for roster sync.</p>
+  </div>
+</div>
+
+
