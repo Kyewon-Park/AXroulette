@@ -16,7 +16,7 @@ export class Box2dPhysics implements IPhysics {
 
   async init(): Promise<void> {
     this.Box2D = await Box2DFactory();
-    this.gravity = new this.Box2D.b2Vec2(0, 9.5);
+    this.gravity = new this.Box2D.b2Vec2(0, 10.2);
     this.world = new this.Box2D.b2World(this.gravity);
     console.log('box2d ready');
   }
@@ -110,7 +110,7 @@ export class Box2dPhysics implements IPhysics {
     bodyDef.set_position(new this.Box2D.b2Vec2(x, y));
 
     const body = this.world.CreateBody(bodyDef);
-    body.CreateFixture(circleShape, 1 + Math.random());
+    body.CreateFixture(circleShape, 2.7);
     body.SetAwake(false);
     body.SetEnabled(false);
     this.marbleMap[id] = body;

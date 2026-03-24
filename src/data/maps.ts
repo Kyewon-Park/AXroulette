@@ -383,8 +383,8 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
       radius: 0.55,
       color: 'rgba(107, 249, 255, 0.95)',
       impulse: {
-      x: (Math.random() - 0.5) * 1.8,
-      y: 5.8 + Math.random() * 1.1,
+      x: (Math.random() - 0.5) * 0.18,
+      y: 0.55 + Math.random() * 0.12,
       },
     });
   }
@@ -476,11 +476,15 @@ function createManualWorkCourse(): StageDef {
         [11.6, 189, 2.0, 0.58, '#ffd59a'],
       ]),
       ...createFunnelBars(13, 108, 5.1, '#ffbe7a', '#76efff'),
+      ...createFunnelBars(13, 140, 4.6, '#ffd28f', '#74efff'),
       ...createUpFunnelBars(13, 118, 4.8, '#76efff', '#ffbe7a'),
+      ...createUpFunnelBars(13, 154, 4.4, '#76efff', '#ffbe7a'),
       ...rotor(9.2, 95, 1.15, 2.05, '#ffcf93', '#76efff'),
       ...rotor(16.8, 95, 1.15, -2.05, '#76efff', '#ffcf93'),
       ...rotor(10.1, 122, 1.05, -1.9, '#ffb26e', '#7af0ff'),
       ...rotor(15.9, 122, 1.05, 1.9, '#7af0ff', '#ffb26e'),
+      ...rotor(8.7, 147, 1.0, 1.85, '#ffcf93', '#76efff'),
+      ...rotor(17.3, 147, 1.0, -1.85, '#76efff', '#ffcf93'),
       ...createFunnelBars(13, 172, 5.1, '#ffbe7a', '#76efff'),
       ...createWideWallFunnelBars(13, 208, 7.6, '#ffcf93', '#76efff'),
       ...createWallSpinners(36, 8, 24),
@@ -501,7 +505,7 @@ function createManualWorkCourse(): StageDef {
       spinner(13, 188, 3.2, 0, 1.85, '#ff8e4d'),
       ...rotor(7.2, 219, 2.1, 2.35, '#ffce92', '#72f2ff'),
       ...rotor(18.8, 219, 2.1, -2.35, '#72f2ff', '#ffce92'),
-      ...rotor(13, 231, 1.6, 2.8, '#ffe9be', '#74efff'),
+      ...rotor(13, 225.8, 1.6, 2.8, '#ffe9be', '#74efff'),
     ],
   };
 }
@@ -551,6 +555,7 @@ function createEfficiencyBoostCourse(): StageDef {
     ])
   );
   entities.push(...createFunnelBars(13, 120, 5.3, '#ffbe7a', '#79efff'));
+  entities.push(...createFunnelBars(13, 148, 4.7, '#ffd28f', '#79efff'));
   entities.push(...createFunnelBars(13, 176, 5.3, '#ffbe7a', '#79efff'));
   entities.push(...createWideWallFunnelBars(13, 218, 7.8, '#ffcf93', '#79efff'));
 

@@ -199,7 +199,7 @@ export class RouletteRenderer {
   }
 
   private renderGoalBanner(stage: StageDef) {
-    const bannerY = stage.goalY - 6.2;
+    const bannerY = stage.goalY - 7.4;
     const centerX = stage.width / 2;
     this.ctx.save();
     this.ctx.textAlign = 'center';

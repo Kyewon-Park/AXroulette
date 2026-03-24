@@ -4,10 +4,10 @@ import type { Marble } from './marble';
 import type { VectorLike } from './types/VectorLike';
 
 export class Camera {
-  private static readonly FOLLOW_ALTERNATE_MS = 5200;
   private static readonly RESULT_OVERVIEW_CYCLE_MS = 48000;
-  private static readonly POSITION_LERP_DIVISOR = 34;
-  private static readonly ZOOM_LERP_DIVISOR = 20;
+  private static readonly POSITION_LERP_DIVISOR = 26;
+  private static readonly ZOOM_LERP_DIVISOR = 16;
+  private static readonly LEADER_SWITCH_DELAY_MS = 500;
   private _position: VectorLike = { x: 0, y: 0 };
   private _targetPosition: VectorLike = { x: 0, y: 0 };
   private _zoom: number = 1;
@@ -15,8 +15,9 @@ export class Camera {
   private _locked = false;
   private _shouldFollowMarbles = false;
   private _resultOverviewStartedAt: number | null = null;
-  private _firstWinnerShowStartedAt: number | null = null;
-  private _lastWinnerCount = 0;
+  private _followedMarbleId: number | null = null;
+  private _pendingLeaderId: number | null = null;
+  private _pendingLeaderSince: number | null = null;
 
   get zoom() {
     return this._zoom;
@@ -56,8 +57,9 @@ export class Camera {
   startFollowingMarbles() {
     this._shouldFollowMarbles = true;
     this._resultOverviewStartedAt = null;
-    this._firstWinnerShowStartedAt = null;
-    this._lastWinnerCount = 0;
+    this._followedMarbleId = null;
+    this._pendingLeaderId = null;
+    this._pendingLeaderSince = null;
   }
 
   initializePosition(center?: VectorLike, zoom?: number) {
@@ -71,8 +73,9 @@ export class Camera {
     this._targetZoom = z;
     this._shouldFollowMarbles = false;
     this._resultOverviewStartedAt = null;
-    this._firstWinnerShowStartedAt = null;
-    this._lastWinnerCount = 0;
+    this._followedMarbleId = null;
+    this._pendingLeaderId = null;
+    this._pendingLeaderSince = null;
   }
 
   update({
@@ -122,48 +125,46 @@ export class Camera {
 
     if (winnerCount >= requiredWinnerCount) {
       this._renderResultOverview(marbles, stage, elapsedMs);
-      this._lastWinnerCount = winnerCount;
       return;
     }
 
     this._resultOverviewStartedAt = null;
 
-    if (winnerCount > 0) {
-      if (this._lastWinnerCount === 0) {
-        this._firstWinnerShowStartedAt = elapsedMs;
-      }
-
-      const firstWinnerShowElapsed =
-        this._firstWinnerShowStartedAt === null ? Number.POSITIVE_INFINITY : elapsedMs - this._firstWinnerShowStartedAt;
-
-      this.setPosition({
-        x: stage.width / 2,
-        y: firstWinnerShowElapsed < 1600 ? stage.goalY - 6 : stage.zoomY - 4,
-      });
-      this.zoom = 1;
-      this._lastWinnerCount = winnerCount;
-      return;
-    }
-
-    this._firstWinnerShowStartedAt = null;
-    this._lastWinnerCount = 0;
-
     if (marbles.length > 0) {
       const leader = marbles[0];
-      const visibleStartY = Math.max(0, stage.topY);
-      const progress = (leader.y - visibleStartY) / Math.max(1, stage.goalY - visibleStartY);
-      const alternateIndex = Math.floor(elapsedMs / Camera.FOLLOW_ALTERNATE_MS) % 2 === 0 ? 0 : 4;
-      const followIndex = progress >= 2 / 3 ? 0 : Math.min(alternateIndex, marbles.length - 1);
-      const targetMarble = marbles[followIndex] ? marbles[followIndex] : marbles[0];
-      this.setPosition(targetMarble.position);
+      if (this._followedMarbleId === null) {
+        this._followedMarbleId = leader.id;
+      }
+
+      if (leader.id !== this._followedMarbleId) {
+        if (this._pendingLeaderId !== leader.id) {
+          this._pendingLeaderId = leader.id;
+          this._pendingLeaderSince = elapsedMs;
+        }
+
+        if (this._pendingLeaderSince !== null && elapsedMs - this._pendingLeaderSince >= Camera.LEADER_SWITCH_DELAY_MS) {
+          this._followedMarbleId = leader.id;
+          this._pendingLeaderId = null;
+          this._pendingLeaderSince = null;
+        }
+      } else {
+        this._pendingLeaderId = null;
+        this._pendingLeaderSince = null;
+      }
+
+      const followedMarble = marbles.find((marble) => marble.id === this._followedMarbleId) ?? leader;
+      this.setPosition(followedMarble.position);
       if (needToZoom) {
         const goalDist = Math.abs(stage.zoomY - this._position.y);
-        this.zoom = Math.max(1, (1 - goalDist / zoomThreshold) * 4);
+        this.zoom = Math.max(0.88, (1 - goalDist / zoomThreshold) * 3.5);
       } else {
-        this.zoom = 1;
+        this.zoom = 0.88;
       }
     } else {
-      this.zoom = 1;
+      this._followedMarbleId = null;
+      this._pendingLeaderId = null;
+      this._pendingLeaderSince = null;
+      this.zoom = 0.88;
     }
   }
 
@@ -182,7 +183,7 @@ export class Camera {
       x: stage.width / 2,
       y: bottomY + (topY - bottomY) * sweep,
     });
-    this.zoom = 1;
+    this.zoom = 0.88;
   }
 
   private _clampTargetToStage(stage: StageDef) {
