@@ -124,7 +124,7 @@ export class Camera {
     if (marbles.length > 0) {
       const leader = marbles[0];
       this.setPosition(leader.position);
-      const bossEntered = winnerCount < requiredWinnerCount && leader.y >= stage.magnet.y;
+      const bossEntered = winnerCount === 0 && leader.y >= stage.goalY - 13.4;
       if (bossEntered) {
         this.zoom = 1.9;
       } else if (needToZoom) {

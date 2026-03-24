@@ -598,7 +598,7 @@ export class Roulette extends EventTarget {
     if (!this._stage) return 1;
     const targetIndex = this._winnerRank - this._winners.length;
     const leader = this._marbles[0];
-    if (this._winners.length < this._winnerRank + 1 && leader && leader.y >= this._stage.magnet.y) {
+    if (this._winners.length === 0 && leader && leader.y >= this._stage.goalY - 13.4) {
       return 0.28;
     }
     if (this._winners.length < this._winnerRank + 1 && this._goalDist < zoomThreshold) {

@@ -504,9 +504,8 @@ export class RouletteRenderer {
 
   private renderWinner({ winner, winners, winnerRank, theme }: RenderParameters) {
     if (!winner && winners.length === 0) return;
-    const lockedWinners = winners.slice(0, Math.min(winners.length, winnerRank + 1));
-    if (lockedWinners.length === 0) return;
-    const displayedWinner = lockedWinners[lockedWinners.length - 1];
+    const displayedWinner = winners[0] ?? winner;
+    if (!displayedWinner) return;
 
     const panelHeight = 112;
     const panelY = this._canvas.height - panelHeight - 20;
@@ -522,11 +521,11 @@ export class RouletteRenderer {
     this.ctx.textAlign = 'left';
     this.ctx.fillStyle = '#fff4dc';
     this.ctx.font = '700 18px "Trebuchet MS", sans-serif';
-    this.ctx.fillText('Winner Locked', this._canvas.width - 320, panelY + 24);
+    this.ctx.fillText('Winner', this._canvas.width - 320, panelY + 24);
 
     this.ctx.font = '800 30px "Trebuchet MS", sans-serif';
     this.ctx.fillStyle = `hsl(${displayedWinner.hue} 100% ${theme.marbleLightness}%)`;
-    this.ctx.fillText(`${lockedWinners.length}. ${displayedWinner.name}`, this._canvas.width - 320, panelY + 78);
+    this.ctx.fillText(displayedWinner.name, this._canvas.width - 320, panelY + 78);
     this.ctx.restore();
   }
 }
