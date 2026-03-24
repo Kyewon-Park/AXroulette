@@ -392,7 +392,7 @@ export class Roulette extends EventTarget {
     }
 
     this._lastMagnetPulseAt = this._raceElapsed;
-    this._effects.push(new SkillEffect(magnet.x, magnet.y));
+    this._effects.push(new SkillEffect(magnet.x, magnet.y, 'bossPulse'));
 
     this._marbles.forEach((marble) => {
       if (this._retiredIds.has(marble.id)) return;
@@ -596,12 +596,15 @@ export class Roulette extends EventTarget {
 
   private _calcTimeScale(): number {
     if (!this._stage) return 1;
+    if (this._winners.length > 0) {
+      return 1;
+    }
     const targetIndex = this._winnerRank - this._winners.length;
     const leader = this._marbles[0];
-    if (this._winners.length === 0 && leader && leader.y >= this._stage.goalY - 13.4) {
+    if (leader && leader.y >= this._stage.goalY - 13.4) {
       return 0.28;
     }
-    if (this._winners.length < this._winnerRank + 1 && this._goalDist < zoomThreshold) {
+    if (this._goalDist < zoomThreshold) {
       if (
         this._marbles[targetIndex] &&
         this._marbles[targetIndex].y > this._stage.zoomY - zoomThreshold * 1.2 &&

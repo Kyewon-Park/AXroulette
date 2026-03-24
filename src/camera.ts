@@ -127,14 +127,14 @@ export class Camera {
       const bossEntered = winnerCount === 0 && leader.y >= stage.goalY - 13.4;
       if (bossEntered) {
         this.zoom = 1.9;
-      } else if (needToZoom) {
+      } else if (winnerCount === 0 && needToZoom) {
         const goalDist = Math.abs(stage.zoomY - this._position.y);
-        this.zoom = Math.max(0.88, (1 - goalDist / zoomThreshold) * 3.5);
+        this.zoom = Math.max(0.84, (1 - goalDist / zoomThreshold) * 3.3);
       } else {
-        this.zoom = 0.88;
+        this.zoom = 0.84;
       }
     } else {
-      this.zoom = 0.88;
+      this.zoom = 0.84;
     }
   }
 
@@ -146,7 +146,7 @@ export class Camera {
     const overviewElapsed = elapsedMs - this._resultOverviewStartedAt;
     if (overviewElapsed < Camera.RESULT_OVERVIEW_DELAY_MS) {
       this.setPosition({ x: stage.width / 2, y: stage.goalY - 6 });
-      this.zoom = 0.88;
+      this.zoom = 0.84;
       return;
     }
 
@@ -160,7 +160,7 @@ export class Camera {
       x: stage.width / 2,
       y: bottomY + (topY - bottomY) * sweep,
     });
-    this.zoom = 0.88;
+    this.zoom = 0.84;
   }
 
   private _clampTargetToStage(stage: StageDef) {

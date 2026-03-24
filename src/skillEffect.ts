@@ -9,16 +9,16 @@ export class SkillEffect implements GameObject {
   position: VectorLike;
   private _elapsed: number = 0;
   isDestroy: boolean = false;
-  private type: 'impact' | 'retire';
+  private type: 'impact' | 'retire' | 'bossPulse';
 
-  constructor(x: number, y: number, type: 'impact' | 'retire' = 'impact') {
+  constructor(x: number, y: number, type: 'impact' | 'retire' | 'bossPulse' = 'impact') {
     this.position = { x, y };
     this.type = type;
   }
 
   update(deltaTime: number) {
     this._elapsed += deltaTime;
-    this._size = (this._elapsed / lifetime) * 10;
+    this._size = (this._elapsed / lifetime) * (this.type === 'bossPulse' ? 18 : 10);
     if (this._elapsed > lifetime) {
       this.isDestroy = true;
     }
@@ -28,25 +28,26 @@ export class SkillEffect implements GameObject {
     ctx.save();
     const rate = this._elapsed / lifetime;
     ctx.globalAlpha = 1 - rate * rate;
-    ctx.strokeStyle = theme.danger;
-    ctx.lineWidth = 1.2 / zoom;
+    const isBossPulse = this.type === 'bossPulse';
+    ctx.strokeStyle = isBossPulse ? '#fff5d9' : theme.danger;
+    ctx.lineWidth = (isBossPulse ? 2.2 : 1.2) / zoom;
     ctx.beginPath();
     ctx.arc(this.position.x, this.position.y, this._size, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.strokeStyle = theme.accentAlt;
-    ctx.lineWidth = 0.8 / zoom;
+    ctx.strokeStyle = isBossPulse ? theme.danger : theme.accentAlt;
+    ctx.lineWidth = (isBossPulse ? 1.4 : 0.8) / zoom;
     ctx.beginPath();
     ctx.arc(this.position.x, this.position.y, this._size * 0.58, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.strokeStyle = 'rgba(255,245,220,0.95)';
-    ctx.lineWidth = 0.6 / zoom;
+    ctx.strokeStyle = isBossPulse ? 'rgba(255,140,140,0.95)' : 'rgba(255,245,220,0.95)';
+    ctx.lineWidth = (isBossPulse ? 1.1 : 0.6) / zoom;
     ctx.beginPath();
-    for (let index = 0; index < 6; index++) {
-      const angle = (Math.PI * 2 * index) / 6 + rate * 1.6;
+    for (let index = 0; index < (isBossPulse ? 10 : 6); index++) {
+      const angle = (Math.PI * 2 * index) / (isBossPulse ? 10 : 6) + rate * (isBossPulse ? 2.4 : 1.6);
       const inner = this._size * 0.25;
-      const outer = this._size * 0.92;
+      const outer = this._size * (isBossPulse ? 1.15 : 0.92);
       const x1 = this.position.x + Math.cos(angle) * inner;
       const y1 = this.position.y + Math.sin(angle) * inner;
       const x2 = this.position.x + Math.cos(angle) * outer;
