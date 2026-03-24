@@ -29,6 +29,13 @@ export type StageHunter = {
   pulseInterval?: number;
   pulseRadius?: number;
   pulseForce?: number;
+  driftAmplitudeX?: number;
+  driftAmplitudeY?: number;
+  driftSpeedX?: number;
+  driftSpeedY?: number;
+  driftPhaseX?: number;
+  driftPhaseY?: number;
+  movement?: 'axis' | 'chaos';
 };
 
 export type StageHunterState = StageHunter & {
@@ -36,9 +43,22 @@ export type StageHunterState = StageHunter & {
   currentY: number;
 };
 
+export type StageKicker = {
+  id: string;
+  side: 'left' | 'right';
+  hingeX: number;
+  hingeY: number;
+  length: number;
+  restAngle: number;
+  activeAngle: number;
+  color: string;
+  impulse: VectorLike;
+};
+
 export type StageInteractives = {
   boosts: StageBoost[];
   hunters: StageHunter[];
+  kickers: StageKicker[];
 };
 
 export type StageWindZone = {
@@ -267,6 +287,34 @@ function createUpFunnelBars(
   ];
 }
 
+function createWallPinballKickers(y: number, colorA: string, colorB: string): StageKicker[] {
+  const wallAngle = Math.atan2(12, 4);
+  return [
+    {
+      id: `left-kicker-${y}`,
+      side: 'left',
+      hingeX: 4.07,
+      hingeY: y,
+      length: 3.1,
+      restAngle: wallAngle,
+      activeAngle: wallAngle - 1.05,
+      color: colorA,
+      impulse: { x: 16.2, y: -25.8 },
+    },
+    {
+      id: `right-kicker-${y}`,
+      side: 'right',
+      hingeX: 21.93,
+      hingeY: y,
+      length: 3.1,
+      restAngle: -wallAngle,
+      activeAngle: -wallAngle + 1.05,
+      color: colorB,
+      impulse: { x: -16.2, y: -25.8 },
+    },
+  ];
+}
+
 function createPegField(
   startY: number,
   rows: number,
@@ -352,7 +400,7 @@ function createWallWindZones(startY: number, rows: number, gapY: number): StageW
       width: 3.6,
       height: 10,
       direction: 'right',
-      strength: (1.7 + (row % 3) * 0.18) * 2,
+      strength: 1.7 + (row % 3) * 0.18,
       color: 'rgba(116, 239, 255, 0.26)',
     });
     zones.push({
@@ -362,7 +410,7 @@ function createWallWindZones(startY: number, rows: number, gapY: number): StageW
       width: 3.6,
       height: 10,
       direction: 'left',
-      strength: (1.7 + ((row + 1) % 3) * 0.18) * 2,
+      strength: 1.7 + ((row + 1) % 3) * 0.18,
       color: 'rgba(255, 178, 110, 0.22)',
     });
   }
@@ -371,6 +419,7 @@ function createWallWindZones(startY: number, rows: number, gapY: number): StageW
 
 function createInteractives(topY: number, goalY: number, hunterOffset = 0): StageInteractives {
   const boosts: StageBoost[] = [];
+  const kickers: StageKicker[] = topY === -42 ? createWallPinballKickers(222.6, '#ffd7a3', '#8df2ff') : [];
   const hunterRows = [64, 94, 102, 132, 156, 166, 188, 212];
   for (let index = 0; index < 22; index++) {
     const y = 24 + Math.random() * (goalY - 48);
@@ -383,8 +432,8 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
       radius: 0.55,
       color: 'rgba(107, 249, 255, 0.95)',
       impulse: {
-      x: (Math.random() - 0.5) * 0.18,
-      y: 0.55 + Math.random() * 0.12,
+      x: (Math.random() - 0.5) * 0.1,
+      y: 0.32 + Math.random() * 0.08,
       },
     });
   }
@@ -407,7 +456,24 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
     { label: '현업5', x: 15.2, y: hunterRows[4] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'y', amplitude: 3.3, speed: 1.28, phase: Math.PI * 0.7 },
     { label: '현업6', x: 13.2, y: hunterRows[5] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.1, speed: 1.56, phase: Math.PI * 0.88 },
     { label: '현업7', x: 10.8, y: hunterRows[6] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.0, speed: 1.6, phase: Math.PI * 0.95 },
-    { label: '현업8', x: 14.6, y: hunterRows[7] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'x', amplitude: 3.8, speed: 1.82, phase: Math.PI * 1.18 },
+    {
+      label: '현업8',
+      x: 14.6,
+      y: hunterRows[7] + hunterOffset,
+      color: '#ff4d4d',
+      mode: 'retire',
+      axis: 'x',
+      amplitude: 0.2,
+      speed: 0.8,
+      phase: Math.PI * 1.18,
+      movement: 'chaos',
+      driftAmplitudeX: 5.8,
+      driftAmplitudeY: 4.1,
+      driftSpeedX: 2.8,
+      driftSpeedY: 3.9,
+      driftPhaseX: Math.PI * 0.35,
+      driftPhaseY: Math.PI * 1.1,
+    },
   ];
 
   const hunters: StageHunter[] = hunterDefs.map((hunter, index) => ({
@@ -423,12 +489,19 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
     amplitude: hunter.amplitude,
     speed: hunter.speed,
     phase: hunter.phase,
+    movement: (hunter as StageHunter).movement,
+    driftAmplitudeX: (hunter as StageHunter).driftAmplitudeX,
+    driftAmplitudeY: (hunter as StageHunter).driftAmplitudeY,
+    driftSpeedX: (hunter as StageHunter).driftSpeedX,
+    driftSpeedY: (hunter as StageHunter).driftSpeedY,
+    driftPhaseX: (hunter as StageHunter).driftPhaseX,
+    driftPhaseY: (hunter as StageHunter).driftPhaseY,
     pulseInterval: hunter.mode === 'magnet' ? 2900 : undefined,
     pulseRadius: hunter.mode === 'magnet' ? 2.5 : undefined,
     pulseForce: hunter.mode === 'magnet' ? 4.2 : undefined,
   }));
 
-  return { boosts, hunters };
+  return { boosts, hunters, kickers };
 }
 
 function createManualWorkCourse(): StageDef {
@@ -503,9 +576,10 @@ function createManualWorkCourse(): StageDef {
       spinner(13, 90, 3.3, 0, 1.6, '#ff8e4d'),
       spinner(13, 140, 3.6, 0, -1.45, '#76ecff'),
       spinner(13, 188, 3.2, 0, 1.85, '#ff8e4d'),
-      ...rotor(7.2, 219, 2.1, 2.35, '#ffce92', '#72f2ff'),
-      ...rotor(18.8, 219, 2.1, -2.35, '#72f2ff', '#ffce92'),
-      ...rotor(13, 225.8, 1.6, 2.8, '#ffe9be', '#74efff'),
+      ...rotor(7.2, 216.5, 2.1, 2.35, '#ffce92', '#72f2ff'),
+      ...rotor(18.8, 216.5, 2.1, -2.35, '#72f2ff', '#ffce92'),
+      spinner(11.2, 225.9, 2.0, 0.24, -3.1, '#ffe9be'),
+      spinner(14.8, 225.9, 2.0, -0.24, 3.1, '#74efff'),
     ],
   };
 }

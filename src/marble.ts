@@ -36,6 +36,7 @@ export class Marble {
   private _statusElapsed = 0;
   private _ghostElapsed = 0;
   private _windCooldown = 0;
+  private _position = { x: 0, y: 0, angle: 0 };
   private lastPosition: VectorLike = { x: 0, y: 0 };
   private theme: ColorTheme = Themes.dark;
   private physics: IPhysics;
@@ -44,7 +45,7 @@ export class Marble {
   id: number;
 
   get position() {
-    return this.physics.getMarblePosition(this.id) || { x: 0, y: 0, angle: 0 };
+    return this._position;
   }
 
   get x() {
@@ -93,7 +94,19 @@ export class Marble {
 
     const spawnX = spawn?.x ?? 10.25 + (order % 10) * 0.6;
     const spawnY = spawn?.y ?? maxLine - line + lineDelta;
+    this._position = { x: spawnX, y: spawnY, angle: 0 };
     physics.createMarble(order, spawnX, spawnY);
+  }
+
+  syncPhysicsPosition() {
+    const position = this.physics.getMarblePosition(this.id);
+    if (position) {
+      this._position = position;
+    }
+  }
+
+  setCachedTransform(position: VectorLike, angle = this._position.angle) {
+    this._position = { x: position.x, y: position.y, angle };
   }
 
   update(deltaTime: number) {

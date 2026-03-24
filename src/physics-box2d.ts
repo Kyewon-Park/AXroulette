@@ -16,7 +16,7 @@ export class Box2dPhysics implements IPhysics {
 
   async init(): Promise<void> {
     this.Box2D = await Box2DFactory();
-    this.gravity = new this.Box2D.b2Vec2(0, 10.2);
+    this.gravity = new this.Box2D.b2Vec2(0, 14);
     this.world = new this.Box2D.b2World(this.gravity);
     console.log('box2d ready');
   }
