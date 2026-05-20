@@ -110,6 +110,86 @@ body.race-live .control-panel {
   gap: 10px;
 }
 
+.map-picker {
+  display: grid;
+  gap: 10px;
+}
+
+.picker-head {
+  display: grid;
+  gap: 4px;
+}
+
+.picker-head span {
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.picker-head small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.map-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.map-card {
+  border: 1px solid rgba(116, 239, 255, 0.12);
+  border-radius: 16px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at top, rgba(116, 239, 255, 0.16), transparent 65%),
+    rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.map-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(116, 239, 255, 0.28);
+}
+
+.map-card.is-selected {
+  border-color: rgba(116, 239, 255, 0.56);
+  box-shadow:
+    0 0 0 1px rgba(116, 239, 255, 0.2) inset,
+    0 12px 24px rgba(116, 239, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(116, 239, 255, 0.16), rgba(255, 154, 77, 0.08)),
+    rgba(255, 255, 255, 0.07);
+}
+
+.map-card strong {
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.map-card small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.map-badge {
+  color: var(--accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .field,
 .toggle {
   display: grid;
@@ -212,6 +292,10 @@ input[type='number']:focus {
   font-size: 0.82rem;
 }
 
+#courseDescription {
+  margin-bottom: 6px;
+}
+
 @media (max-width: 720px) {
   .control-panel {
     left: 12px;
@@ -221,7 +305,8 @@ input[type='number']:focus {
   }
 
   .field-grid,
-  .actions {
+  .actions,
+  .map-cards {
     grid-template-columns: 1fr;
   }
 }

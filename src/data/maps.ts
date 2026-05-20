@@ -87,10 +87,12 @@ export type StageMagnet = {
 
 export type StageDef = {
   title: string;
+  description: string;
   goalY: number;
   zoomY: number;
   topY: number;
   width: number;
+  showCourseGuides?: boolean;
   entities: MapEntity[];
   windZones: StageWindZone[];
   magnet: StageMagnet;
@@ -226,6 +228,84 @@ function createSideRails(startY: number, endY: number): MapEntity[] {
   return rails;
 }
 
+function createDiagonalSwitchbackFrame(topY: number, goalY: number): MapEntity[] {
+  return [
+    wall(
+      [
+        [2.4, topY],
+        [2.4, topY + 14],
+        [7.2, topY + 14],
+        [18.6, topY + 20.6],
+        [18.6, topY + 25],
+        [6.0, topY + 32.3],
+        [6.0, topY + 37.8],
+        [10.8, topY + 42],
+        [10.6, goalY + 2],
+      ],
+      '#ffb26e'
+    ),
+    wall(
+      [
+        [23.6, topY],
+        [23.6, topY + 14],
+        [18.2, topY + 14],
+        [23.6, topY + 21.8],
+        [23.6, topY + 27],
+        [9.2, topY + 34.3],
+        [9.2, topY + 39.4],
+        [18.4, topY + 43.6],
+        [18.2, goalY + 2],
+      ],
+      '#79efff'
+    ),
+    wall(
+      [
+        [2.4, topY],
+        [23.6, topY],
+      ],
+      '#ffe2b8'
+    ),
+  ];
+}
+
+function createPinchedFrame(topY: number, goalY: number): MapEntity[] {
+  return [
+    wall(
+      [
+        [4.2, topY],
+        [4.2, topY + 7],
+        [9.0, topY + 9],
+        [13.9, topY + 24],
+        [11.5, topY + 33],
+        [6.2, topY + 48],
+        [8.9, topY + 59],
+        [12.9, goalY + 2],
+      ],
+      '#79efff'
+    ),
+    wall(
+      [
+        [21.8, topY],
+        [21.8, topY + 7],
+        [21.0, topY + 9],
+        [21.8, topY + 24],
+        [17.0, topY + 33],
+        [11.9, topY + 48],
+        [15.2, topY + 59],
+        [19.2, goalY + 2],
+      ],
+      '#79efff'
+    ),
+    wall(
+      [
+        [4.2, topY],
+        [21.8, topY],
+      ],
+      '#d9fdff'
+    ),
+  ];
+}
+
 function createChevronGrid(startY: number, rows: number, gap: number, colorA: string, colorB: string): MapEntity[] {
   const entities: MapEntity[] = [];
   for (let row = 0; row < rows; row++) {
@@ -243,6 +323,14 @@ function createScatterSlantedBars(
   entries: Array<[number, number, number, number, string]>
 ): MapEntity[] {
   return entries.map(([x, y, width, rotation, color]) => staticBox(x, y, width, 0.14, rotation, color, 0.42));
+}
+
+function createRotatingSlantedBars(
+  entries: Array<[number, number, number, number, string, number?]>
+): MapEntity[] {
+  return entries.map(([x, y, width, rotation, color, angularVelocity]) =>
+    box(x, y, width, 0.14, rotation, color, 0.42, angularVelocity ?? (x < COURSE_WIDTH / 2 ? 1.9 : -1.9))
+  );
 }
 
 function createFunnelBars(
@@ -448,6 +536,13 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
     amplitude: number;
     speed: number;
     phase: number;
+    movement?: 'axis' | 'chaos';
+    driftAmplitudeX?: number;
+    driftAmplitudeY?: number;
+    driftSpeedX?: number;
+    driftSpeedY?: number;
+    driftPhaseX?: number;
+    driftPhaseY?: number;
   }> = [
     { label: '현업1', x: 11.0, y: hunterRows[0] + hunterOffset, color: '#ffd54a', mode: 'magnet', axis: 'x', amplitude: 6.2, speed: 1.15, phase: 0 },
     { label: '현업2', x: 14.8, y: hunterRows[1] + hunterOffset, color: '#ff4d4d', mode: 'retire', axis: 'y', amplitude: 3.5, speed: 1.35, phase: Math.PI * 0.2 },
@@ -504,14 +599,290 @@ function createInteractives(topY: number, goalY: number, hunterOffset = 0): Stag
   return { boosts, hunters, kickers };
 }
 
+function createEmptyInteractives(): StageInteractives {
+  return {
+    boosts: [],
+    hunters: [],
+    kickers: [],
+  };
+}
+
+function intensifyHunters(hunters: StageHunter[], amplitudeScale = 1.85, speedScale = 1.55): StageHunter[] {
+  return hunters.map((hunter) => ({
+    ...hunter,
+    radius: hunter.mode === 'retire' ? hunter.radius * 1.08 : hunter.radius,
+    magnetRange: hunter.mode === 'retire' ? hunter.magnetRange * 1.08 : hunter.magnetRange,
+    amplitude: hunter.amplitude * amplitudeScale,
+    speed: hunter.speed * speedScale,
+    driftAmplitudeX: hunter.driftAmplitudeX ? hunter.driftAmplitudeX * amplitudeScale : hunter.driftAmplitudeX,
+    driftAmplitudeY: hunter.driftAmplitudeY ? hunter.driftAmplitudeY * amplitudeScale : hunter.driftAmplitudeY,
+    driftSpeedX: hunter.driftSpeedX ? hunter.driftSpeedX * speedScale : hunter.driftSpeedX,
+    driftSpeedY: hunter.driftSpeedY ? hunter.driftSpeedY * speedScale : hunter.driftSpeedY,
+  }));
+}
+
+function createQuickDropInteractives(): StageInteractives {
+  const hunters: StageHunter[] = [
+      {
+        id: 'quick-red-2',
+        label: '현업',
+        x: 13.0,
+        y: 16.3,
+        radius: 0.44,
+        magnetRange: 0.44,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.15,
+        speed: 0.96,
+        phase: Math.PI * 0.35,
+        movement: 'chaos',
+        driftAmplitudeX: 1.05,
+        driftAmplitudeY: 0.86,
+        driftSpeedX: 2.55,
+        driftSpeedY: 3.1,
+        driftPhaseX: Math.PI * 0.42,
+        driftPhaseY: Math.PI * 0.88,
+      },
+      {
+        id: 'quick-red-mid-1',
+        label: '현업',
+        x: 11.7,
+        y: 24.4,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1,
+        phase: Math.PI * 0.18,
+        movement: 'chaos',
+        driftAmplitudeX: 0.82,
+        driftAmplitudeY: 0.52,
+        driftSpeedX: 3.05,
+        driftSpeedY: 3.8,
+        driftPhaseX: Math.PI * 0.15,
+        driftPhaseY: Math.PI * 0.62,
+      },
+      {
+        id: 'quick-red-mid-3',
+        label: '현업',
+        x: 14.3,
+        y: 24.8,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1,
+        phase: Math.PI * 0.84,
+        movement: 'chaos',
+        driftAmplitudeX: 0.84,
+        driftAmplitudeY: 0.5,
+        driftSpeedX: 3.18,
+        driftSpeedY: 3.72,
+        driftPhaseX: Math.PI * 0.92,
+        driftPhaseY: Math.PI * 1.34,
+      },
+      {
+        id: 'quick-red-lower-start-1',
+        label: '현업',
+        x: 9.7,
+        y: 18.4,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1,
+        phase: Math.PI * 0.26,
+        movement: 'chaos',
+        driftAmplitudeX: 1.0,
+        driftAmplitudeY: 0.48,
+        driftSpeedX: 3.2,
+        driftSpeedY: 3.62,
+        driftPhaseX: Math.PI * 0.28,
+        driftPhaseY: Math.PI * 0.72,
+      },
+      {
+        id: 'quick-red-lower-start-3',
+        label: '현업',
+        x: 16.3,
+        y: 18.8,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1,
+        phase: Math.PI * 0.92,
+        movement: 'chaos',
+        driftAmplitudeX: 1.0,
+        driftAmplitudeY: 0.5,
+        driftSpeedX: 3.1,
+        driftSpeedY: 3.7,
+        driftPhaseX: Math.PI * 0.96,
+        driftPhaseY: Math.PI * 1.38,
+      },
+      {
+        id: 'quick-red-roam-3',
+        label: '현업',
+        x: 10.9,
+        y: 31.4,
+        radius: 0.37,
+        magnetRange: 0.37,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1.04,
+        phase: Math.PI * 0.66,
+        movement: 'chaos',
+        driftAmplitudeX: 0.8,
+        driftAmplitudeY: 0.54,
+        driftSpeedX: 3.3,
+        driftSpeedY: 4.18,
+        driftPhaseX: Math.PI * 0.7,
+        driftPhaseY: Math.PI * 1.1,
+      },
+      {
+        id: 'quick-red-bottom-1',
+        label: '현업',
+        x: 14.2,
+        y: 54.8,
+        radius: 0.39,
+        magnetRange: 0.39,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.2,
+        speed: 1.28,
+        phase: Math.PI * 1.34,
+        movement: 'chaos',
+        driftAmplitudeX: 2.05,
+        driftAmplitudeY: 0.88,
+        driftSpeedX: 4.55,
+        driftSpeedY: 4.7,
+        driftPhaseX: Math.PI * 1.38,
+        driftPhaseY: Math.PI * 1.82,
+      },
+    ];
+
+  return {
+    boosts: [],
+    hunters: intensifyHunters(hunters),
+    kickers: [],
+  };
+}
+
+function createPinballPanicInteractives(): StageInteractives {
+  const hunters: StageHunter[] = [
+      {
+        id: 'pinball-red-lower-start-2',
+        label: '현업',
+        x: 18.2,
+        y: 13.6,
+        radius: 0.4,
+        magnetRange: 0.4,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.12,
+        speed: 1.06,
+        phase: Math.PI * 0.58,
+        movement: 'chaos',
+        driftAmplitudeX: 0.92,
+        driftAmplitudeY: 0.62,
+        driftSpeedX: 3.44,
+        driftSpeedY: 4.0,
+        driftPhaseX: Math.PI * 0.54,
+        driftPhaseY: Math.PI * 1.04,
+      },
+      {
+        id: 'pinball-red-roam-2',
+        label: '현업',
+        x: 11.0,
+        y: 21.2,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1.08,
+        phase: Math.PI * 0.38,
+        movement: 'chaos',
+        driftAmplitudeX: 0.88,
+        driftAmplitudeY: 0.58,
+        driftSpeedX: 3.48,
+        driftSpeedY: 4.24,
+        driftPhaseX: Math.PI * 0.5,
+        driftPhaseY: Math.PI * 0.88,
+      },
+      {
+        id: 'pinball-red-roam-4',
+        label: '현업',
+        x: 14.4,
+        y: 39.0,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.1,
+        speed: 1.08,
+        phase: Math.PI * 0.94,
+        movement: 'chaos',
+        driftAmplitudeX: 0.92,
+        driftAmplitudeY: 0.54,
+        driftSpeedX: 3.66,
+        driftSpeedY: 4.28,
+        driftPhaseX: Math.PI * 1.02,
+        driftPhaseY: Math.PI * 1.46,
+      },
+      {
+        id: 'pinball-red-bottom-1',
+        label: '현업',
+        x: 15.0,
+        y: 43.2,
+        radius: 0.39,
+        magnetRange: 0.39,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.2,
+        speed: 1.28,
+        phase: Math.PI * 1.28,
+        movement: 'chaos',
+        driftAmplitudeX: 1.95,
+        driftAmplitudeY: 0.72,
+        driftSpeedX: 4.55,
+        driftSpeedY: 4.85,
+        driftPhaseX: Math.PI * 1.22,
+        driftPhaseY: Math.PI * 1.72,
+      },
+    ];
+
+  return {
+    boosts: [],
+    hunters: intensifyHunters(hunters, 2.05, 1.7),
+    kickers: [],
+  };
+}
+
 function createManualWorkCourse(): StageDef {
   const topY = -42;
   const goalY = 236;
   return {
-    title: 'Manual Work',
+    title: 'Map 1 - Original',
+    description: 'The original long course with the full hazard set.',
     topY,
     goalY,
-    zoomY: 222,
+    zoomY: 228,
     width: COURSE_WIDTH,
     windZones: createWallWindZones(28, 10, 20),
     magnet: {
@@ -584,81 +955,116 @@ function createManualWorkCourse(): StageDef {
   };
 }
 
-function createEfficiencyBoostCourse(): StageDef {
-  const topY = -56;
-  const goalY = 250;
-  const accent = '#8cedff';
+function createQuickDropCourse(): StageDef {
+  const topY = -10;
+  const goalY = 68;
   const entities: MapEntity[] = [
-    ...createFrame(topY, goalY, accent),
-    ...createSideRails(topY + 18, goalY - 10),
-    ...createWallSpinners(34, 9, 23),
-    ...createPegField(18, 72, 10 / 3, '#8cecff', 0, [[108, 138]]),
-    ...createPegField(19.7, 62, 10 / 3, '#d7fbff', 1, [[108, 138]]),
+    ...createPinchedFrame(topY, goalY),
     ...createChaosField([
-      [8.6, 58, 1.2, 0.14, -1.06, '#ffb26e'],
-      [17.3, 72, 1.1, 0.14, 0.88, '#79efff'],
-      [11.2, 92, 1.4, 0.14, 0.48, '#ffb26e'],
-      [15.2, 108, 1.0, 0.14, -1.18, '#79efff'],
-      [9.7, 142, 1.3, 0.14, 1.04, '#ffcf93'],
-      [16.5, 162, 1.6, 0.14, -0.44, '#79efff'],
-      [12.6, 186, 1.0, 0.14, 0.92, '#ffb26e'],
-      [14.7, 214, 1.5, 0.14, -0.72, '#79efff'],
+      [16.4, 13.5, 1.1, 0.14, 0.48, '#78efff'],
+      [10.0, 35.8, 1.1, 0.14, -0.42, '#78efff'],
+      [15.2, 55.8, 1.1, 0.14, 0.36, '#78efff'],
     ]),
   ];
 
-  for (let y = 34, row = 0; y <= 214; y += 18, row++) {
-    const openLeft = row % 2 === 0;
-    entities.push(box(openLeft ? 18.2 : 7.8, y, 3.4, 0.15, openLeft ? -0.38 : 0.38, '#ffb26e'));
-    entities.push(box(openLeft ? 8.2 : 17.8, y + 6.5, 2.1, 0.12, openLeft ? 0.55 : -0.55, '#79efff'));
-  }
-
   entities.push(
-    ...createScatterSlantedBars([
-      [8.4, 44, 1.85, 0.68, '#ffb26e'],
-      [13.5, 52, 1.7, -0.42, '#ffd49f'],
-      [16.5, 61, 1.65, -0.76, '#79efff'],
-      [7.2, 68, 1.95, 0.86, '#ffb26e'],
-      [11.3, 78, 1.8, 0.54, '#ffd49f'],
-      [18.5, 86, 1.7, -0.62, '#79efff'],
-      [14.7, 132, 1.7, -0.66, '#79efff'],
-      [6.9, 142, 1.9, 0.74, '#ffb26e'],
-      [10.1, 152, 1.85, 0.82, '#ffd49f'],
-      [17.9, 160, 1.7, -0.52, '#79efff'],
-      [12.6, 181, 1.95, 0.61, '#ffd49f'],
-      [9.4, 221, 1.85, 0.58, '#ffd49f'],
+    ...createRotatingSlantedBars([
+      [10.6, 3.6, 1.7, 0.48, '#dbfdff', 1.85],
+      [14.1, 5.5, 2.2, 0.58, '#79efff', -2.05],
+      [17.6, 8.2, 2.0, 0.46, '#d9fdff', 2.15],
+      [15.8, 12.0, 2.5, -0.34, '#79efff', -2.05],
+      [18.8, 15.8, 1.8, -0.5, '#dbfdff', 2.2],
+      [16.6, 19.3, 2.2, -0.62, '#79efff', -2.2],
+      [13.6, 23.0, 2.4, -0.52, '#d9fdff', 2.05],
+      [11.0, 27.0, 2.4, -0.58, '#79efff', -2.15],
+      [8.8, 31.0, 2.0, -0.46, '#dbfdff', 2.2],
+      [10.7, 35.0, 2.4, 0.42, '#d9fdff', -2.0],
+      [8.5, 39.4, 2.1, 0.58, '#79efff', 2.15],
+      [10.9, 43.6, 2.1, 0.52, '#dbfdff', -2.18],
+      [13.4, 47.2, 2.4, 0.48, '#d9fdff', 2.1],
+      [15.8, 51.0, 2.3, 0.56, '#79efff', -2.22],
+      [13.2, 54.7, 2.0, -0.34, '#dbfdff', 2.12],
+      [16.4, 58.7, 2.2, -0.48, '#79efff', -2.2],
+      [14.3, 62.4, 2.2, 0.24, '#d9fdff', 2.05],
+      [17.2, 65.2, 1.8, -0.38, '#79efff', -2.15],
     ])
   );
-  entities.push(...createFunnelBars(13, 120, 5.3, '#ffbe7a', '#79efff'));
-  entities.push(...createFunnelBars(13, 148, 4.7, '#ffd28f', '#79efff'));
-  entities.push(...createFunnelBars(13, 176, 5.3, '#ffbe7a', '#79efff'));
-  entities.push(...createWideWallFunnelBars(13, 218, 7.8, '#ffcf93', '#79efff'));
-
-  entities.push(spinner(9.2, 112, 2.8, 0.2, 2.2, '#ff8e4d'));
-  entities.push(spinner(16.8, 150, 2.8, -0.2, -2.1, '#79efff'));
-  entities.push(...rotor(13, 242, 1.75, 2.65, '#fff2c0', '#79efff'));
+  entities.push(...rotor(17.4, 17.4, 1.2, 2.35, '#dbfdff', '#79efff'));
+  entities.push(...rotor(9.2, 38.2, 1.2, -2.35, '#dbfdff', '#79efff'));
+  entities.push(...rotor(15.8, 58.8, 1.18, 2.25, '#dbfdff', '#79efff'));
+  entities.push(spinner(15.9, 28.2, 2.4, -0.22, -1.75, '#8cefff'));
+  entities.push(spinner(10.0, 48.6, 2.2, 0.18, 1.75, '#8cefff'));
+  entities.push(spinner(15.8, 64.5, 2.0, -0.14, -1.65, '#8cefff'));
 
   return {
-    title: 'Efficiency Boost',
+    title: 'Map 2 - Quick Drop',
+    description: 'A short no-AI switchback course that bends right, left, then right.',
     topY,
     goalY,
-    zoomY: 236,
+    zoomY: 62,
     width: COURSE_WIDTH,
-    windZones: createWallWindZones(24, 11, 20),
+    showCourseGuides: false,
+    windZones: [],
     magnet: {
       x: COURSE_WIDTH / 2,
       y: goalY - 16,
-      radius: 1.35,
-      triggerRadius: 4.2,
-      pullStrength: 1.0,
-      swirlStrength: 0.55,
-      duration: 2000,
-      pulseInterval: 4000,
-      pulseRadius: 5.4,
-      pulseForce: 5.6,
+      radius: 1.05,
+      triggerRadius: 3.8,
+      pullStrength: 1.04,
+      swirlStrength: 0.48,
+      duration: 1200,
+      pulseInterval: 3600,
+      pulseRadius: 4.3,
+      pulseForce: 4.4,
     },
-    createInteractives: () => createInteractives(topY, goalY, 10),
+    createInteractives: createQuickDropInteractives,
     entities,
   };
 }
 
-export const stages: StageDef[] = [createManualWorkCourse(), createEfficiencyBoostCourse()];
+function createPinballPanicCourse(): StageDef {
+  const topY = -8;
+  const goalY = 50;
+  const entities: MapEntity[] = [
+    ...createDiagonalSwitchbackFrame(topY, goalY),
+    ...createRotatingSlantedBars([
+      [12.8, 8.8, 3.0, 0.52, '#ffb26e'],
+      [16.0, 12.1, 3.2, 0.52, '#79efff'],
+      [19.0, 15.5, 2.8, 0.46, '#ffd49f'],
+      [9.8, 33.3, 2.6, 0.46, '#ffd49f'],
+      [13.6, 36.7, 3.0, 0.42, '#79efff'],
+      [14.2, 44.0, 2.5, 0.12, '#ffb26e'],
+    ]),
+    ...createRotatingSlantedBars([
+      [20.4, 18.7, 1.1, 0.52, '#79efff'],
+    ]),
+    ...rotor(19.0, 19.3, 1.15, 2.15, '#ffce92', '#79efff'),
+  ];
+
+  return {
+    title: 'Map 3 - Pinball Panic',
+    description: 'A shallow 30-degree switchback: down, right, left, then down.',
+    topY,
+    goalY,
+    zoomY: 45,
+    width: COURSE_WIDTH,
+    showCourseGuides: false,
+    windZones: [],
+    magnet: {
+      x: COURSE_WIDTH / 2,
+      y: goalY - 16,
+      radius: 1.08,
+      triggerRadius: 3.8,
+      pullStrength: 1.1,
+      swirlStrength: 0.45,
+      duration: 1200,
+      pulseInterval: 3400,
+      pulseRadius: 4.2,
+      pulseForce: 4.6,
+    },
+    createInteractives: createPinballPanicInteractives,
+    entities,
+  };
+}
+
+export const stages: StageDef[] = [createManualWorkCourse(), createQuickDropCourse(), createPinballPanicCourse()];

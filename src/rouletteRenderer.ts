@@ -17,6 +17,7 @@ export type RenderParameters = {
   entities: MapEntityState[];
   marbles: Marble[];
   retired: Marble[];
+  retireNotices: string[];
   winners: Marble[];
   boosts: StageBoost[];
   hunters: StageHunterState[];
@@ -157,7 +158,9 @@ export class RouletteRenderer {
     }
     this.ctx.restore();
 
-    this.renderSideColumns();
+    if (stage.showCourseGuides !== false) {
+      this.renderSideColumns();
+    }
 
     this.ctx.save();
     this.ctx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -186,6 +189,10 @@ export class RouletteRenderer {
   }
 
   private renderCourseGlow(stage: StageDef) {
+    if (stage.showCourseGuides === false) {
+      return;
+    }
+
     this.ctx.save();
     this.ctx.strokeStyle = 'rgba(116, 239, 255, 0.24)';
     this.ctx.lineWidth = 0.08;
@@ -199,6 +206,10 @@ export class RouletteRenderer {
   }
 
   private renderGoalBanner(stage: StageDef) {
+    if (stage.showCourseGuides === false) {
+      return;
+    }
+
     const bannerY = stage.goalY - 7.4;
     const centerX = stage.width / 2;
     this.ctx.save();

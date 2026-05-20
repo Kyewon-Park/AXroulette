@@ -48,7 +48,7 @@ export class RankRenderer implements UIObject {
 
   render(
     ctx: CanvasRenderingContext2D,
-    { winners, marbles, retired, winnerRank, theme }: RenderParameters,
+    { winners, marbles, retired, retireNotices, winnerRank, theme }: RenderParameters,
     width: number,
     height: number
   ) {
@@ -57,6 +57,8 @@ export class RankRenderer implements UIObject {
     const panelY = 14;
     const panelHeight = Math.min(260, height * 0.45);
     const startY = Math.max(-this.fontHeight, this._currentY - panelHeight / 2);
+    const visibleTop = startY - this.fontHeight;
+    const visibleBottom = startY + panelHeight;
     this.maxY = Math.max(0, (marbles.length + winners.length + retired.length) * this.fontHeight + this.fontHeight);
     this._currentWinner = winners.length;
 
@@ -93,6 +95,7 @@ export class RankRenderer implements UIObject {
 
     winners.forEach((marble, index) => {
       const y = index * this.fontHeight;
+      if (y < visibleTop || y > visibleBottom) return;
       ctx.fillStyle = `hsl(${marble.hue} 100% ${theme.marbleLightness}%)`;
       ctx.strokeText(`${index + 1}. ${marble.name}`, panelX + 10, panelY + 56 + y);
       ctx.fillText(`${index + 1}. ${marble.name}`, panelX + 10, panelY + 56 + y);
@@ -100,6 +103,7 @@ export class RankRenderer implements UIObject {
 
     marbles.forEach((marble, index) => {
       const y = (index + winners.length) * this.fontHeight;
+      if (y < visibleTop || y > visibleBottom) return;
       const text = `${index + winners.length + 1 === winnerRank + 1 ? '>' : ''}${marble.name}`;
       ctx.fillStyle = `hsl(${marble.hue} 100% ${theme.marbleLightness}%)`;
       ctx.strokeText(text, panelX + 10, panelY + 56 + y);
@@ -108,11 +112,43 @@ export class RankRenderer implements UIObject {
 
     retired.forEach((marble, index) => {
       const y = (index + winners.length + marbles.length) * this.fontHeight;
+      if (y < visibleTop || y > visibleBottom) return;
       ctx.fillStyle = theme.danger;
       ctx.strokeText(`RET ${marble.name}`, panelX + 10, panelY + 56 + y);
       ctx.fillText(`RET ${marble.name}`, panelX + 10, panelY + 56 + y);
     });
     ctx.restore();
+
+    const visibleNotices = retireNotices.slice(-10);
+    if (visibleNotices.length > 0) {
+      const noticeLineHeight = 28;
+      const noticeY = panelY + panelHeight + 18;
+      const noticeHeight = Math.min(height - noticeY - 12, visibleNotices.length * noticeLineHeight + 28);
+
+      if (noticeHeight > 18) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(7, 14, 26, 0.72)';
+        ctx.strokeStyle = 'rgba(255, 88, 88, 0.68)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(panelX, noticeY, panelWidth, noticeHeight, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.rect(panelX + 8, noticeY + 6, panelWidth - 16, noticeHeight - 10);
+        ctx.clip();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.font = '700 10px "Trebuchet MS", sans-serif';
+        ctx.fillStyle = theme.danger;
+        visibleNotices.forEach((notice, index) => {
+          ctx.fillText(notice, panelX + 10, noticeY + 12 + index * noticeLineHeight);
+        });
+        ctx.restore();
+      }
+    }
   }
 
   update(deltaTime: number) {

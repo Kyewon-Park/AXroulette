@@ -24,6 +24,8 @@
 <body>
 <script type="module" src="./src/index.ts"></script>
 <script type="text/javascript">
+  const MAP_STORAGE_KEY = 'neon_drop_map';
+
   function getNames() {
     const value = document.querySelector('#in_names').value.trim();
     return value.split(/[,\r\n]/g).map((v) => v.trim()).filter((v) => !!v);
@@ -41,9 +43,112 @@
   }
 
   let ready = false;
+  let selectedMapIndex = 0;
 
   function setStatus(message) {
     document.querySelector('#statusLine').textContent = message;
+  }
+
+  function ensureCourseDescription() {
+    let description = document.querySelector('#courseDescription');
+    if (description) return description;
+
+    description = document.createElement('p');
+    description.id = 'courseDescription';
+    document.querySelector('#statusLine').before(description);
+    return description;
+  }
+
+  function ensureMapPicker() {
+    if (!document.querySelector('#mapCards')) {
+      const section = document.createElement('section');
+      section.className = 'map-picker';
+
+      const pickerHead = document.createElement('div');
+      pickerHead.className = 'picker-head';
+
+      const title = document.createElement('span');
+      title.textContent = 'Map Select';
+
+      const copy = document.createElement('small');
+      copy.textContent = 'Choose the course before you launch the run.';
+
+      const cards = document.createElement('div');
+      cards.id = 'mapCards';
+      cards.className = 'map-cards';
+
+      pickerHead.append(title, copy);
+      section.append(pickerHead, cards);
+      document.querySelector('.field-grid').before(section);
+    }
+
+    const courseLabel = document.querySelector('.field-grid .field span');
+    if (courseLabel) {
+      courseLabel.textContent = 'Map Menu';
+    }
+
+    const toggleLabel = document.querySelector('.toggle span');
+    if (toggleLabel) {
+      toggleLabel.textContent = 'Bonus effects and hunters';
+    }
+  }
+
+  function setCourseInfo(course) {
+    if (!course) return;
+    ensureCourseDescription();
+    document.querySelector('#courseName').textContent = course.title;
+    document.querySelector('#courseDescription').textContent = course.description;
+  }
+
+  function refreshMapSelection(index) {
+    selectedMapIndex = index;
+    document.querySelector('#sltMap').value = `${index}`;
+    document.querySelectorAll('.map-card').forEach((card) => {
+      const isSelected = parseInt(card.dataset.index, 10) === index;
+      card.classList.toggle('is-selected', isSelected);
+      card.setAttribute('aria-pressed', `${isSelected}`);
+    });
+    setCourseInfo(window.roulette.getMaps()[index]);
+  }
+
+  function renderMapCards(maps) {
+    ensureMapPicker();
+    const mapCards = document.querySelector('#mapCards');
+    mapCards.innerHTML = '';
+
+    maps.forEach((map) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'map-card';
+      button.dataset.index = `${map.index}`;
+
+      const badge = document.createElement('span');
+      badge.className = 'map-badge';
+      badge.textContent = `MAP ${map.index + 1}`;
+
+      const title = document.createElement('strong');
+      title.textContent = map.title;
+
+      const description = document.createElement('small');
+      description.textContent = map.description;
+
+      button.append(badge, title, description);
+      button.addEventListener('click', () => {
+        applyMapSelection(map.index);
+      });
+      mapCards.append(button);
+    });
+  }
+
+  function applyMapSelection(index, shouldSync = true) {
+    const maps = window.roulette.getMaps();
+    const safeIndex = Math.max(0, Math.min(maps.length - 1, index));
+    localStorage.setItem(MAP_STORAGE_KEY, `${safeIndex}`);
+    window.roulette.setMap(safeIndex);
+    refreshMapSelection(safeIndex);
+    if (shouldSync) {
+      syncRoster();
+    }
   }
 
   window.addEventListener('error', (event) => {
@@ -99,7 +204,7 @@
     window.roulette.setWinningRank(window.options.winningRank);
 
     document.querySelector('#rosterCount').textContent = `${total}`;
-    document.querySelector('#courseName').textContent = window.roulette.getStageInfo().title;
+    setCourseInfo(window.roulette.getStageInfo());
     setStatus(ready ? `Roster synced. ${total} marbles loaded.` : 'Add names to arm the race.');
   }
 
@@ -159,16 +264,16 @@
 
     const maps = window.roulette.getMaps();
     const mapSelector = document.querySelector('#sltMap');
+    renderMapCards(maps);
     maps.forEach((map) => {
       const option = document.createElement('option');
-      option.value = map.index;
+      option.value = `${map.index}`;
       option.textContent = map.title;
       mapSelector.append(option);
     });
 
     mapSelector.addEventListener('change', (e) => {
-      window.roulette.setMap(parseInt(e.target.value, 10));
-      syncRoster();
+      applyMapSelection(parseInt(e.target.value, 10));
     });
 
     document.querySelector('#in_names').addEventListener('blur', () => {
@@ -212,6 +317,9 @@
       setStatus(e.detail);
     });
 
+    const savedMap = parseInt(localStorage.getItem(MAP_STORAGE_KEY) || '0', 10);
+    const initialMap = Number.isNaN(savedMap) ? 0 : Math.max(0, Math.min(maps.length - 1, savedMap));
+    applyMapSelection(initialMap, false);
     syncRoster();
   }
 </script>

@@ -123,13 +123,16 @@ export class Camera {
 
     if (marbles.length > 0) {
       const leader = marbles[0];
+      const focusMarble = marbles[Math.max(0, Math.min(targetIndex, marbles.length - 1))] ?? leader;
       this.setPosition(leader.position);
-      const bossEntered = winnerCount === 0 && leader.y >= stage.goalY - 13.4;
+      const bossEntered = winnerCount === 0 && leader.y >= stage.goalY - 3.6;
       if (bossEntered) {
-        this.zoom = 1.9;
-      } else if (winnerCount === 0 && needToZoom) {
-        const goalDist = Math.abs(stage.zoomY - this._position.y);
-        this.zoom = Math.max(0.84, (1 - goalDist / zoomThreshold) * 3.3);
+        this.zoom = 0.96;
+      } else if (winnerCount === 0) {
+        const zoomWindow = zoomThreshold * 1.8;
+        const zoneDist = Math.abs(stage.zoomY - focusMarble.y);
+        const proximity = Math.max(0, 1 - zoneDist / zoomWindow);
+        this.zoom = 0.84 + proximity * 0.14;
       } else {
         this.zoom = 0.84;
       }
@@ -177,7 +180,7 @@ export class Camera {
     }
 
     const minY = stage.topY + halfHeight;
-    const maxY = Math.max(minY, stage.goalY - halfHeight + 2.2);
+    const maxY = Math.max(minY, stage.goalY - halfHeight + 15);
     this._targetPosition.y = Math.min(maxY, Math.max(minY, this._targetPosition.y));
   }
 

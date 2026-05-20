@@ -13,8 +13,9 @@ import { RankRenderer } from './rankRenderer';
 import { RouletteRenderer } from './rouletteRenderer';
 import { SkillEffect } from './skillEffect';
 import type { ColorTheme } from './types/ColorTheme';
-import type { EntityCircleShape } from './types/MapEntity.type';
+import type { EntityCircleShape, MapEntityState } from './types/MapEntity.type';
 import type { MouseEventHandlerName, MouseEventName } from './types/mouseEvents.type';
+import type { VectorLike } from './types/VectorLike';
 import type { UIObject } from './UIObject';
 import { bound } from './utils/bound.decorator';
 import { parseName, shuffle } from './utils/utils';
@@ -32,6 +33,9 @@ export class Roulette extends EventTarget {
   private _lastMagnetPulseAt = 0;
   private _lastHunterPulseAt = new Map<string, number>();
   private _lastWindPulseAt = new Map<string, number>();
+  private _lastRetireEffectAt = -Infinity;
+  private _lastRetireMessageAt = -Infinity;
+  private _retireNotices: Array<{ text: string; createdAt: number }> = [];
   private _pegBouncers: Array<{ x: number; y: number; radius: number }> = [];
   private _wallKickers: WallKicker[] = [];
   private _boosts: StageBoost[] = [];
@@ -300,10 +304,18 @@ export class Roulette extends EventTarget {
     const clingRadius = magnet.radius + marble.size * 0.78;
     const targetX = magnet.x + Math.cos(state.angle) * clingRadius;
     const targetY = magnet.y + Math.sin(state.angle) * clingRadius;
+    const target = { x: targetX, y: targetY };
+
+    if (this._wouldMagnetMoveThroughObstacle(marble.position, target, marble.size * 0.5 + 0.04)) {
+      this._magnetized.delete(marble.id);
+      this._magnetCooldown.set(marble.id, 700);
+      this.physics.setMarbleVelocity(marble.id, { x: 0, y: 0.9 });
+      return;
+    }
 
     this.physics.setMarbleVelocity(marble.id, { x: 0, y: 0 });
-    this.physics.setMarbleTransform(marble.id, { x: targetX, y: targetY }, state.angle + Math.PI / 2);
-    marble.setCachedTransform({ x: targetX, y: targetY }, state.angle + Math.PI / 2);
+    this.physics.setMarbleTransform(marble.id, target, state.angle + Math.PI / 2);
+    marble.setCachedTransform(target, state.angle + Math.PI / 2);
   }
 
   private _applyHunterMagnet(marble: Marble, deltaTime: number, hunterStates: StageHunterState[]) {
@@ -333,6 +345,127 @@ export class Roulette extends EventTarget {
     this.physics.setMarbleVelocity(marble.id, { x: 0, y: 0 });
     this.physics.setMarbleTransform(marble.id, { x: targetX, y: targetY }, state.angle + Math.PI / 2);
     marble.setCachedTransform({ x: targetX, y: targetY }, state.angle + Math.PI / 2);
+  }
+
+  private _wouldMagnetMoveThroughObstacle(from: VectorLike, to: VectorLike, radius: number) {
+    return this.physics.getEntities().some((entity) => this._segmentHitsEntity(from, to, radius, entity));
+  }
+
+  private _segmentHitsEntity(from: VectorLike, to: VectorLike, radius: number, entity: MapEntityState) {
+    switch (entity.shape.type) {
+      case 'polyline':
+        return entity.shape.points.some((point, index, points) => {
+          if (index === points.length - 1) return false;
+          const a = this._transformEntityPoint(entity, point[0], point[1]);
+          const b = this._transformEntityPoint(entity, points[index + 1][0], points[index + 1][1]);
+          return this._segmentDistanceSq(from, to, a, b) <= radius * radius;
+        });
+      case 'box': {
+        const angle = entity.angle + entity.shape.rotation;
+        const localFrom = this._toLocalPoint(from, entity.x, entity.y, angle);
+        const localTo = this._toLocalPoint(to, entity.x, entity.y, angle);
+        const halfWidth = entity.shape.width + radius;
+        const halfHeight = entity.shape.height + radius;
+        const fromInside = this._pointInAabb(localFrom, halfWidth, halfHeight);
+        const toInside = this._pointInAabb(localTo, halfWidth, halfHeight);
+        return toInside || (!fromInside && this._segmentIntersectsAabb(localFrom, localTo, halfWidth, halfHeight));
+      }
+      case 'circle': {
+        const center = { x: entity.x, y: entity.y };
+        const hitRadius = entity.shape.radius + radius;
+        return this._pointSegmentDistanceSq(center, from, to) <= hitRadius * hitRadius;
+      }
+    }
+  }
+
+  private _transformEntityPoint(entity: MapEntityState, x: number, y: number): VectorLike {
+    const cos = Math.cos(entity.angle);
+    const sin = Math.sin(entity.angle);
+    return {
+      x: entity.x + x * cos - y * sin,
+      y: entity.y + x * sin + y * cos,
+    };
+  }
+
+  private _toLocalPoint(point: VectorLike, centerX: number, centerY: number, angle: number): VectorLike {
+    const dx = point.x - centerX;
+    const dy = point.y - centerY;
+    const cos = Math.cos(-angle);
+    const sin = Math.sin(-angle);
+    return {
+      x: dx * cos - dy * sin,
+      y: dx * sin + dy * cos,
+    };
+  }
+
+  private _pointInAabb(point: VectorLike, halfWidth: number, halfHeight: number) {
+    return Math.abs(point.x) <= halfWidth && Math.abs(point.y) <= halfHeight;
+  }
+
+  private _segmentIntersectsAabb(from: VectorLike, to: VectorLike, halfWidth: number, halfHeight: number) {
+    return (
+      this._segmentsIntersect(from, to, { x: -halfWidth, y: -halfHeight }, { x: halfWidth, y: -halfHeight }) ||
+      this._segmentsIntersect(from, to, { x: halfWidth, y: -halfHeight }, { x: halfWidth, y: halfHeight }) ||
+      this._segmentsIntersect(from, to, { x: halfWidth, y: halfHeight }, { x: -halfWidth, y: halfHeight }) ||
+      this._segmentsIntersect(from, to, { x: -halfWidth, y: halfHeight }, { x: -halfWidth, y: -halfHeight })
+    );
+  }
+
+  private _segmentDistanceSq(a: VectorLike, b: VectorLike, c: VectorLike, d: VectorLike) {
+    if (this._segmentsIntersect(a, b, c, d)) return 0;
+    return Math.min(
+      this._pointSegmentDistanceSq(a, c, d),
+      this._pointSegmentDistanceSq(b, c, d),
+      this._pointSegmentDistanceSq(c, a, b),
+      this._pointSegmentDistanceSq(d, a, b)
+    );
+  }
+
+  private _pointSegmentDistanceSq(point: VectorLike, a: VectorLike, b: VectorLike) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) {
+      const px = point.x - a.x;
+      const py = point.y - a.y;
+      return px * px + py * py;
+    }
+
+    const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lenSq));
+    const x = a.x + dx * t;
+    const y = a.y + dy * t;
+    const px = point.x - x;
+    const py = point.y - y;
+    return px * px + py * py;
+  }
+
+  private _segmentsIntersect(a: VectorLike, b: VectorLike, c: VectorLike, d: VectorLike) {
+    const abC = this._cross(a, b, c);
+    const abD = this._cross(a, b, d);
+    const cdA = this._cross(c, d, a);
+    const cdB = this._cross(c, d, b);
+    const epsilon = 0.00001;
+
+    if (Math.abs(abC) < epsilon && this._pointOnSegment(c, a, b)) return true;
+    if (Math.abs(abD) < epsilon && this._pointOnSegment(d, a, b)) return true;
+    if (Math.abs(cdA) < epsilon && this._pointOnSegment(a, c, d)) return true;
+    if (Math.abs(cdB) < epsilon && this._pointOnSegment(b, c, d)) return true;
+
+    return abC * abD < 0 && cdA * cdB < 0;
+  }
+
+  private _cross(a: VectorLike, b: VectorLike, c: VectorLike) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  }
+
+  private _pointOnSegment(point: VectorLike, a: VectorLike, b: VectorLike) {
+    const epsilon = 0.00001;
+    return (
+      point.x >= Math.min(a.x, b.x) - epsilon &&
+      point.x <= Math.max(a.x, b.x) + epsilon &&
+      point.y >= Math.min(a.y, b.y) - epsilon &&
+      point.y <= Math.max(a.y, b.y) + epsilon
+    );
   }
 
   private _updateMagnetCooldowns(deltaTime: number) {
@@ -548,8 +681,15 @@ export class Roulette extends EventTarget {
     this._retiredIds.add(marble.id);
     marble.showRetire();
     this._retired.push(marble);
-    this._effects.push(new SkillEffect(marble.x, marble.y, 'retire'));
-    this.dispatchEvent(new CustomEvent('message', { detail: `${source} stunned ${marble.name} and retired them` }));
+    if (this._raceElapsed - this._lastRetireEffectAt > 90) {
+      this._effects.push(new SkillEffect(marble.x, marble.y, 'retire'));
+      this._lastRetireEffectAt = this._raceElapsed;
+    }
+    if (this._raceElapsed - this._lastRetireMessageAt > 220) {
+      this._retireNotices.push({ text: `${source} retired ${marble.name}`, createdAt: this._raceElapsed });
+      this._retireNotices = this._retireNotices.slice(-10);
+      this._lastRetireMessageAt = this._raceElapsed;
+    }
     setTimeout(() => {
       this.physics.removeMarble(marble.id);
     }, 220);
@@ -601,7 +741,7 @@ export class Roulette extends EventTarget {
     }
     const targetIndex = this._winnerRank - this._winners.length;
     const leader = this._marbles[0];
-    if (leader && leader.y >= this._stage.goalY - 13.4) {
+    if (leader && leader.y >= this._stage.goalY - 3.6) {
       return 0.28;
     }
     if (this._goalDist < zoomThreshold) {
@@ -703,6 +843,7 @@ export class Roulette extends EventTarget {
 
   private _render() {
     if (!this._stage) return;
+    this._retireNotices = this._retireNotices.filter((notice) => this._raceElapsed - notice.createdAt <= 1000);
     this._renderer.render(
       {
         camera: this._camera,
@@ -710,6 +851,7 @@ export class Roulette extends EventTarget {
         entities: this.physics.getEntities(),
         marbles: this._marbles,
         retired: this._retired,
+        retireNotices: this._retireNotices.map((notice) => notice.text),
         winners: this._winners,
         boosts: this._boosts,
         hunters: this.getHunterStates(),
@@ -788,8 +930,15 @@ export class Roulette extends EventTarget {
       window.addEventListener('pointercancel', onPointerRelease);
     });
 
-    ['MouseMove', 'DblClick'].forEach((eventName) => {
-      canvas.addEventListener(eventName.toLowerCase().replace('mouse', 'pointer'), this.mouseHandler.bind(this, eventName));
+    const pointerEventBindings: Array<{ eventName: 'MouseMove' | 'DblClick'; domEvent: 'pointermove' | 'dblclick' }> = [
+      { eventName: 'MouseMove', domEvent: 'pointermove' },
+      { eventName: 'DblClick', domEvent: 'dblclick' },
+    ];
+
+    pointerEventBindings.forEach(({ eventName, domEvent }) => {
+      canvas.addEventListener(domEvent, (e: Event) => {
+        this.mouseHandler(eventName, e as MouseEvent);
+      });
     });
 
     canvas.addEventListener('contextmenu', (e) => {
@@ -823,6 +972,7 @@ export class Roulette extends EventTarget {
     this._winner = null;
     this._winners = [];
     this._retired = [];
+    this._retireNotices = [];
     this._retiredIds.clear();
     this._magnetized.clear();
     this._hunterMagnetized.clear();
@@ -831,6 +981,8 @@ export class Roulette extends EventTarget {
     this._lastMagnetPulseAt = 0;
     this._lastHunterPulseAt.clear();
     this._lastWindPulseAt.clear();
+    this._lastRetireEffectAt = -Infinity;
+    this._lastRetireMessageAt = -Infinity;
     this._effects = [];
     this._marbles = [];
   }
@@ -844,6 +996,7 @@ export class Roulette extends EventTarget {
     }
     this._winner = null;
     this._retired = [];
+    this._retireNotices = [];
     this._retiredIds.clear();
     this._magnetized.clear();
     this._hunterMagnetized.clear();
@@ -852,6 +1005,8 @@ export class Roulette extends EventTarget {
     this._lastMagnetPulseAt = 0;
     this._lastHunterPulseAt.clear();
     this._lastWindPulseAt.clear();
+    this._lastRetireEffectAt = -Infinity;
+    this._lastRetireMessageAt = -Infinity;
     this._raceElapsed = 0;
     this._targetUnreachableAnnounced = false;
     this._effects = [...this._wallKickers];
@@ -928,22 +1083,22 @@ export class Roulette extends EventTarget {
         .map((_, index) => index)
     );
 
-    const columns = Math.min(
-      totalCount,
-      Math.max(12, Math.min(18, Math.ceil(Math.sqrt(totalCount * 1.65))))
-    );
+    const compactStart = this._stage?.showCourseGuides === false;
+    const columns = compactStart
+      ? Math.min(totalCount, Math.max(10, Math.min(14, Math.ceil(Math.sqrt(totalCount * 1.4)))))
+      : Math.min(totalCount, Math.max(12, Math.min(18, Math.ceil(Math.sqrt(totalCount * 1.65)))));
     const rows = Math.ceil(totalCount / columns);
-    const gapX = totalCount >= 150 ? 0.72 : totalCount >= 80 ? 0.68 : 0.64;
-    const gapY = 0.58;
+    const gapX = compactStart ? 0.42 : totalCount >= 150 ? 0.72 : totalCount >= 80 ? 0.68 : 0.64;
+    const gapY = compactStart ? 0.38 : 0.58;
     const spawnCenterX = 13;
-    const spawnTopY = 1.4;
+    const spawnTopY = compactStart ? (this._stage?.topY ?? -8) + 1.2 : 1.4;
 
     members.forEach((member) => {
       for (let countIndex = 0; countIndex < member.count; countIndex++) {
         const order = orders.pop() ?? 0;
         const row = Math.floor(order / columns);
         const col = order % columns;
-        const rowOffset = row % 2 === 0 ? 0 : gapX * 0.5;
+        const rowOffset = row % 2 === 0 ? -gapX * 0.18 : gapX * 0.18;
         const spawnX = spawnCenterX + (col - (columns - 1) / 2) * gapX + rowOffset;
         const spawnY = spawnTopY + row * gapY;
         this._marbles.push(
@@ -999,6 +1154,7 @@ export class Roulette extends EventTarget {
     return stages.map((stage, index) => ({
       index,
       title: stage.title,
+      description: stage.description,
     }));
   }
 
