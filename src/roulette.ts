@@ -653,8 +653,9 @@ export class Roulette extends EventTarget {
   private _checkHunterCollision(marble: Marble, hunterStates: StageHunterState[]) {
     if (marble.isGhost) return;
     if (this._hunterMagnetized.has(marble.id)) return;
-    if ((this._magnetCooldown.get(marble.id) ?? 0) > 0) return;
+    const hasMagnetCooldown = (this._magnetCooldown.get(marble.id) ?? 0) > 0;
     for (const hunter of hunterStates) {
+      if (hunter.mode === 'magnet' && hasMagnetCooldown) continue;
       const dx = marble.x - hunter.currentX;
       const dy = marble.y - hunter.currentY;
       const radius =
@@ -964,7 +965,7 @@ export class Roulette extends EventTarget {
     this._hunters = interactives.hunters;
     this._wallKickers = interactives.kickers.map((kicker) => new WallKicker(kicker));
     this._effects.push(...this._wallKickers);
-    this._camera.initializePosition({ x: this._stage.width / 2, y: 2 }, 1.6);
+    this._camera.initializePosition({ x: this._stage.width / 2, y: 2 }, 0.8);
   }
 
   public clearMarbles() {
@@ -1121,8 +1122,8 @@ export class Roulette extends EventTarget {
       const viewW = canvasWidth / initialZoom;
       const viewH = canvasHeight / initialZoom;
       const zoom = Math.max(
-        1.35,
-        Math.min(Math.min(viewW / (spawnWidth + margin * 2), viewH / (spawnHeight + margin * 2)), 2.4)
+        0.68,
+        Math.min(Math.min(viewW / (spawnWidth + margin * 2), viewH / (spawnHeight + margin * 2)) * 0.5, 1.2)
       );
 
       this._camera.initializePosition({ x: centerX, y: centerY }, zoom);
@@ -1169,6 +1170,6 @@ export class Roulette extends EventTarget {
     const names = this._marbles.map((marble) => marble.name);
     this._stage = stages[index];
     this.setMarbles(names);
-    this._camera.initializePosition({ x: this._stage.width / 2, y: 2 }, 1.6);
+    this._camera.initializePosition({ x: this._stage.width / 2, y: 2 }, 0.8);
   }
 }

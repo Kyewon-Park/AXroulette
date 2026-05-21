@@ -85,6 +85,15 @@ export type StageMagnet = {
   pulseForce: number;
 };
 
+export type StageBackground = {
+  image: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  opacity?: number;
+};
+
 export type StageDef = {
   title: string;
   description: string;
@@ -92,6 +101,8 @@ export type StageDef = {
   zoomY: number;
   topY: number;
   width: number;
+  background?: StageBackground;
+  bossImage?: string;
   showCourseGuides?: boolean;
   entities: MapEntity[];
   windZones: StageWindZone[];
@@ -103,6 +114,10 @@ const COURSE_LEFT = 2.2;
 const COURSE_RIGHT = 23.8;
 const COURSE_WIDTH = 26;
 const DEFAULT_BAR_SPIN = 1.65;
+const map4SpaceBackground = './assets/images/map4-space.png';
+const map5RaceBackground = './assets/images/map5-race.png';
+const map6ForestBackground = './assets/images/map6-forest.png';
+const aiRobotBossImage = './assets/images/boss-ai-robot.png';
 
 const wall = (points: [number, number][], color?: string): MapEntity => ({
   position: { x: 0, y: 0 },
@@ -624,27 +639,6 @@ function intensifyHunters(hunters: StageHunter[], amplitudeScale = 1.85, speedSc
 function createQuickDropInteractives(): StageInteractives {
   const hunters: StageHunter[] = [
       {
-        id: 'quick-red-2',
-        label: '현업',
-        x: 13.0,
-        y: 16.3,
-        radius: 0.44,
-        magnetRange: 0.44,
-        color: '#ff4d4d',
-        mode: 'retire',
-        axis: 'x',
-        amplitude: 0.15,
-        speed: 0.96,
-        phase: Math.PI * 0.35,
-        movement: 'chaos',
-        driftAmplitudeX: 1.05,
-        driftAmplitudeY: 0.86,
-        driftSpeedX: 2.55,
-        driftSpeedY: 3.1,
-        driftPhaseX: Math.PI * 0.42,
-        driftPhaseY: Math.PI * 0.88,
-      },
-      {
         id: 'quick-red-mid-1',
         label: '현업',
         x: 11.7,
@@ -664,27 +658,6 @@ function createQuickDropInteractives(): StageInteractives {
         driftSpeedY: 3.8,
         driftPhaseX: Math.PI * 0.15,
         driftPhaseY: Math.PI * 0.62,
-      },
-      {
-        id: 'quick-red-mid-3',
-        label: '현업',
-        x: 14.3,
-        y: 24.8,
-        radius: 0.38,
-        magnetRange: 0.38,
-        color: '#ff4d4d',
-        mode: 'retire',
-        axis: 'x',
-        amplitude: 0.1,
-        speed: 1,
-        phase: Math.PI * 0.84,
-        movement: 'chaos',
-        driftAmplitudeX: 0.84,
-        driftAmplitudeY: 0.5,
-        driftSpeedX: 3.18,
-        driftSpeedY: 3.72,
-        driftPhaseX: Math.PI * 0.92,
-        driftPhaseY: Math.PI * 1.34,
       },
       {
         id: 'quick-red-lower-start-1',
@@ -782,27 +755,6 @@ function createQuickDropInteractives(): StageInteractives {
 function createPinballPanicInteractives(): StageInteractives {
   const hunters: StageHunter[] = [
       {
-        id: 'pinball-red-lower-start-2',
-        label: '현업',
-        x: 18.2,
-        y: 13.6,
-        radius: 0.4,
-        magnetRange: 0.4,
-        color: '#ff4d4d',
-        mode: 'retire',
-        axis: 'x',
-        amplitude: 0.12,
-        speed: 1.06,
-        phase: Math.PI * 0.58,
-        movement: 'chaos',
-        driftAmplitudeX: 0.92,
-        driftAmplitudeY: 0.62,
-        driftSpeedX: 3.44,
-        driftSpeedY: 4.0,
-        driftPhaseX: Math.PI * 0.54,
-        driftPhaseY: Math.PI * 1.04,
-      },
-      {
         id: 'pinball-red-roam-2',
         label: '현업',
         x: 11.0,
@@ -824,6 +776,48 @@ function createPinballPanicInteractives(): StageInteractives {
         driftPhaseY: Math.PI * 0.88,
       },
       {
+        id: 'pinball-red-roam-5',
+        label: '현업',
+        x: 15.9,
+        y: 17.4,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.14,
+        speed: 1.22,
+        phase: Math.PI * 0.72,
+        movement: 'chaos',
+        driftAmplitudeX: 1.08,
+        driftAmplitudeY: 0.72,
+        driftSpeedX: 4.15,
+        driftSpeedY: 4.62,
+        driftPhaseX: Math.PI * 0.78,
+        driftPhaseY: Math.PI * 1.24,
+      },
+      {
+        id: 'pinball-red-roam-6',
+        label: '현업',
+        x: 17.1,
+        y: 29.8,
+        radius: 0.39,
+        magnetRange: 0.39,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.14,
+        speed: 1.24,
+        phase: Math.PI * 1.08,
+        movement: 'chaos',
+        driftAmplitudeX: 1.14,
+        driftAmplitudeY: 0.74,
+        driftSpeedX: 4.28,
+        driftSpeedY: 4.78,
+        driftPhaseX: Math.PI * 1.18,
+        driftPhaseY: Math.PI * 1.58,
+      },
+      {
         id: 'pinball-red-roam-4',
         label: '현업',
         x: 14.4,
@@ -843,6 +837,27 @@ function createPinballPanicInteractives(): StageInteractives {
         driftSpeedY: 4.28,
         driftPhaseX: Math.PI * 1.02,
         driftPhaseY: Math.PI * 1.46,
+      },
+      {
+        id: 'pinball-red-roam-7',
+        label: '현업',
+        x: 10.2,
+        y: 35.2,
+        radius: 0.38,
+        magnetRange: 0.38,
+        color: '#ff4d4d',
+        mode: 'retire',
+        axis: 'x',
+        amplitude: 0.14,
+        speed: 1.2,
+        phase: Math.PI * 1.42,
+        movement: 'chaos',
+        driftAmplitudeX: 1.12,
+        driftAmplitudeY: 0.7,
+        driftSpeedX: 4.34,
+        driftSpeedY: 4.68,
+        driftPhaseX: Math.PI * 1.48,
+        driftPhaseY: Math.PI * 1.84,
       },
       {
         id: 'pinball-red-bottom-1',
@@ -955,7 +970,7 @@ function createManualWorkCourse(): StageDef {
   };
 }
 
-function createQuickDropCourse(): StageDef {
+function createQuickDropCourse(options: Partial<Pick<StageDef, 'title' | 'description' | 'background' | 'bossImage'>> = {}): StageDef {
   const topY = -10;
   const goalY = 68;
   const entities: MapEntity[] = [
@@ -997,12 +1012,14 @@ function createQuickDropCourse(): StageDef {
   entities.push(spinner(15.8, 64.5, 2.0, -0.14, -1.65, '#8cefff'));
 
   return {
-    title: 'Map 2 - Quick Drop',
-    description: 'A short no-AI switchback course that bends right, left, then right.',
+    title: options.title ?? 'Map 2 - Quick Drop',
+    description: options.description ?? 'A short no-AI switchback course that bends right, left, then right.',
     topY,
     goalY,
     zoomY: 62,
     width: COURSE_WIDTH,
+    background: options.background,
+    bossImage: options.bossImage ?? aiRobotBossImage,
     showCourseGuides: false,
     windZones: [],
     magnet: {
@@ -1020,6 +1037,51 @@ function createQuickDropCourse(): StageDef {
     createInteractives: createQuickDropInteractives,
     entities,
   };
+}
+
+function createSpaceDropCourse(): StageDef {
+  const topY = -10;
+  return createQuickDropCourse({
+    title: 'Map 4 - Space Drop',
+    description: 'Map 2 layout with the cosmic neon background.',
+    background: {
+      image: map4SpaceBackground,
+      x: 0,
+      y: topY,
+      width: COURSE_WIDTH,
+      height: 78,
+    },
+  });
+}
+
+function createRaceDropCourse(): StageDef {
+  const topY = -10;
+  return createQuickDropCourse({
+    title: 'Map 5 - Race Drop',
+    description: 'Map 2 layout with the toy racing course background.',
+    background: {
+      image: map5RaceBackground,
+      x: 0,
+      y: topY,
+      width: COURSE_WIDTH,
+      height: 78,
+    },
+  });
+}
+
+function createForestDropCourse(): StageDef {
+  const topY = -10;
+  return createQuickDropCourse({
+    title: 'Map 6 - Forest Drop',
+    description: 'Map 2 layout with the bright forest cliff background.',
+    background: {
+      image: map6ForestBackground,
+      x: 0,
+      y: topY,
+      width: COURSE_WIDTH,
+      height: 78,
+    },
+  });
 }
 
 function createPinballPanicCourse(): StageDef {
@@ -1048,6 +1110,7 @@ function createPinballPanicCourse(): StageDef {
     goalY,
     zoomY: 45,
     width: COURSE_WIDTH,
+    bossImage: aiRobotBossImage,
     showCourseGuides: false,
     windZones: [],
     magnet: {
@@ -1067,4 +1130,11 @@ function createPinballPanicCourse(): StageDef {
   };
 }
 
-export const stages: StageDef[] = [createManualWorkCourse(), createQuickDropCourse(), createPinballPanicCourse()];
+export const stages: StageDef[] = [
+  createManualWorkCourse(),
+  createQuickDropCourse(),
+  createPinballPanicCourse(),
+  createSpaceDropCourse(),
+  createRaceDropCourse(),
+  createForestDropCourse(),
+];

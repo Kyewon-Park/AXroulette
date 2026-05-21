@@ -8,6 +8,11 @@ export class Camera {
   private static readonly RESULT_OVERVIEW_DELAY_MS = 7000;
   private static readonly POSITION_LERP_DIVISOR = 26;
   private static readonly ZOOM_LERP_DIVISOR = 16;
+  private static readonly FAR_ZOOM = 0.44;
+  private static readonly FOCUS_ZOOM = 0.5;
+  private static readonly BOSS_ZOOM = 0.56;
+  private static readonly MIN_CLAMP_ZOOM = 0.42;
+  private static readonly TOP_FOLLOW_PADDING = 8;
   private _position: VectorLike = { x: 0, y: 0 };
   private _targetPosition: VectorLike = { x: 0, y: 0 };
   private _zoom: number = 1;
@@ -127,17 +132,17 @@ export class Camera {
       this.setPosition(leader.position);
       const bossEntered = winnerCount === 0 && leader.y >= stage.goalY - 3.6;
       if (bossEntered) {
-        this.zoom = 0.96;
+        this.zoom = Camera.BOSS_ZOOM;
       } else if (winnerCount === 0) {
         const zoomWindow = zoomThreshold * 1.8;
         const zoneDist = Math.abs(stage.zoomY - focusMarble.y);
         const proximity = Math.max(0, 1 - zoneDist / zoomWindow);
-        this.zoom = 0.84 + proximity * 0.14;
+        this.zoom = Camera.FAR_ZOOM + proximity * (Camera.FOCUS_ZOOM - Camera.FAR_ZOOM);
       } else {
-        this.zoom = 0.84;
+        this.zoom = Camera.FAR_ZOOM;
       }
     } else {
-      this.zoom = 0.84;
+      this.zoom = Camera.FAR_ZOOM;
     }
   }
 
@@ -149,7 +154,7 @@ export class Camera {
     const overviewElapsed = elapsedMs - this._resultOverviewStartedAt;
     if (overviewElapsed < Camera.RESULT_OVERVIEW_DELAY_MS) {
       this.setPosition({ x: stage.width / 2, y: stage.goalY - 6 });
-      this.zoom = 0.84;
+      this.zoom = Camera.FAR_ZOOM;
       return;
     }
 
@@ -163,11 +168,11 @@ export class Camera {
       x: stage.width / 2,
       y: bottomY + (topY - bottomY) * sweep,
     });
-    this.zoom = 0.84;
+    this.zoom = Camera.FAR_ZOOM;
   }
 
   private _clampTargetToStage(stage: StageDef) {
-    const safeZoom = Math.max(this._targetZoom, 0.8);
+    const safeZoom = Math.max(this._targetZoom, Camera.MIN_CLAMP_ZOOM);
     const halfWidth = canvasWidth / (initialZoom * 2 * safeZoom);
     const halfHeight = canvasHeight / (initialZoom * 2 * safeZoom);
 
@@ -179,7 +184,7 @@ export class Camera {
       this._targetPosition.x = Math.min(maxX, Math.max(minX, this._targetPosition.x));
     }
 
-    const minY = stage.topY + halfHeight;
+    const minY = stage.topY + Math.min(halfHeight, Camera.TOP_FOLLOW_PADDING);
     const maxY = Math.max(minY, stage.goalY - halfHeight + 15);
     this._targetPosition.y = Math.min(maxY, Math.max(minY, this._targetPosition.y));
   }

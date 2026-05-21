@@ -37,6 +37,9 @@ export class RouletteRenderer {
   protected _keywordService: KeywordService;
   private _bossImage: HTMLImageElement | null = null;
   private _bossBadge: CanvasImageSource | null = null;
+  private _stageBackgrounds = new Map<string, HTMLImageElement>();
+  private _bossImages = new Map<string, HTMLImageElement>();
+  private _bossBadges = new Map<string, CanvasImageSource>();
 
   constructor() {
     this._keywordService = this.createKeywordService();
@@ -60,7 +63,7 @@ export class RouletteRenderer {
 
   async init() {
     this._bossImage = await this.loadImage(new URL('../ceo.png', import.meta.url).toString());
-    this._bossBadge = this.createBossBadge();
+    this._bossBadge = this.createBossBadge(this._bossImage);
     this._canvas = document.createElement('canvas');
     this._canvas.width = canvasWidth;
     this._canvas.height = canvasHeight;
@@ -108,6 +111,7 @@ export class RouletteRenderer {
     this.ctx.font = '0.4pt sans-serif';
     this.ctx.lineWidth = 3 / (renderParameters.camera.zoom + initialZoom);
     renderParameters.camera.renderScene(this.ctx, () => {
+      this.renderStageBackground(renderParameters.stage);
       this.renderCourseGlow(renderParameters.stage);
       this.renderEntities(renderParameters.entities);
       this.renderWindZones(renderParameters.stage.windZones);
@@ -123,6 +127,34 @@ export class RouletteRenderer {
     uiObjects.forEach((obj) => obj.render(this.ctx, renderParameters, this._canvas.width, this._canvas.height));
     renderParameters.particleManager.render(this.ctx);
     this.renderWinner(renderParameters);
+  }
+
+  private renderStageBackground(stage: StageDef) {
+    if (!stage.background) {
+      return;
+    }
+
+    const image = this.getStageBackground(stage.background.image);
+    if (!image || image.naturalWidth === 0) {
+      return;
+    }
+
+    this.ctx.save();
+    this.ctx.globalAlpha = stage.background.opacity ?? 1;
+    this.ctx.drawImage(image, stage.background.x, stage.background.y, stage.background.width, stage.background.height);
+    this.ctx.restore();
+  }
+
+  private getStageBackground(url: string): HTMLImageElement | null {
+    const cached = this._stageBackgrounds.get(url);
+    if (cached) {
+      return cached.complete ? cached : null;
+    }
+
+    const image = new Image();
+    image.src = url;
+    this._stageBackgrounds.set(url, image);
+    return image.complete ? image : null;
   }
 
   private renderBackdrop({ stage }: RenderParameters) {
@@ -266,7 +298,7 @@ export class RouletteRenderer {
       this.ctx.stroke();
     }
 
-    const badge = this._bossBadge ?? this.createBossBadge();
+    const badge = this.getBossBadge(stage.bossImage) ?? this._bossBadge ?? this.createBossBadge(this._bossImage);
     this.ctx.save();
     this.ctx.beginPath();
     this.ctx.arc(magnet.x, magnet.y, radius, 0, Math.PI * 2);
@@ -313,7 +345,33 @@ export class RouletteRenderer {
     }
   }
 
-  private createBossBadge(): CanvasImageSource {
+  private getBossBadge(url?: string): CanvasImageSource | null {
+    if (!url) {
+      return this._bossBadge;
+    }
+
+    const cachedBadge = this._bossBadges.get(url);
+    if (cachedBadge) {
+      return cachedBadge;
+    }
+
+    const cachedImage = this._bossImages.get(url);
+    if (cachedImage?.complete && cachedImage.naturalWidth > 0) {
+      const badge = this.createBossBadge(cachedImage);
+      this._bossBadges.set(url, badge);
+      return badge;
+    }
+
+    if (!cachedImage) {
+      const image = new Image();
+      image.src = url;
+      this._bossImages.set(url, image);
+    }
+
+    return null;
+  }
+
+  private createBossBadge(image: HTMLImageElement | null): CanvasImageSource {
     const size = 192;
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -326,11 +384,11 @@ export class RouletteRenderer {
     ctx.beginPath();
     ctx.arc(center, center, radius, 0, Math.PI * 2);
     ctx.clip();
-    if (this._bossImage) {
-      const sourceSize = Math.min(this._bossImage.width, this._bossImage.height);
-      const sx = (this._bossImage.width - sourceSize) / 2;
-      const sy = (this._bossImage.height - sourceSize) / 2;
-      ctx.drawImage(this._bossImage, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+    if (image) {
+      const sourceSize = Math.min(image.width, image.height);
+      const sx = (image.width - sourceSize) / 2;
+      const sy = (image.height - sourceSize) / 2;
+      ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
     } else {
       const skin = ctx.createRadialGradient(center, center * 0.95, 10, center, center, radius);
       skin.addColorStop(0, '#f4cfb2');
