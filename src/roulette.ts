@@ -1091,7 +1091,7 @@ export class Roulette extends EventTarget {
     const rows = Math.ceil(totalCount / columns);
     const gapX = compactStart ? 0.42 : totalCount >= 150 ? 0.72 : totalCount >= 80 ? 0.68 : 0.64;
     const gapY = compactStart ? 0.38 : 0.58;
-    const spawnCenterX = 13;
+    const spawnCenterX = this._stage?.spawnCenterX ?? 13;
     const spawnTopY = compactStart ? (this._stage?.topY ?? -8) + 1.2 : 1.4;
 
     members.forEach((member) => {

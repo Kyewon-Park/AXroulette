@@ -92,6 +92,9 @@ export type StageBackground = {
   width: number;
   height: number;
   opacity?: number;
+  fit?: 'stretch' | 'cover';
+  focusX?: number;
+  focusY?: number;
 };
 
 export type StageDef = {
@@ -103,6 +106,7 @@ export type StageDef = {
   width: number;
   background?: StageBackground;
   bossImage?: string;
+  spawnCenterX?: number;
   showCourseGuides?: boolean;
   entities: MapEntity[];
   windZones: StageWindZone[];
@@ -118,6 +122,70 @@ const map4SpaceBackground = './assets/images/map4-space.png';
 const map5RaceBackground = './assets/images/map5-race.png';
 const map6ForestBackground = './assets/images/map6-forest.png';
 const aiRobotBossImage = './assets/images/boss-ai-robot.png';
+
+type CourseFit = {
+  centerX: number;
+  scaleX: number;
+};
+
+type QuickDropCourseOptions = Partial<Pick<StageDef, 'title' | 'description' | 'background' | 'bossImage'>> & {
+  fit?: CourseFit;
+  frame?: MapEntity[];
+};
+
+const fitX = (x: number, fit: CourseFit) => fit.centerX + (x - COURSE_WIDTH / 2) * fit.scaleX;
+
+const fitEntityToCourse = (entity: MapEntity, fit: CourseFit): MapEntity => {
+  const position = { ...entity.position, x: fitX(entity.position.x, fit) };
+
+  switch (entity.shape.type) {
+    case 'polyline':
+      return {
+        ...entity,
+        position,
+        shape: {
+          ...entity.shape,
+          points: entity.shape.points.map(([x, y]) => [fitX(x, fit), y]),
+        },
+      };
+    case 'box':
+      return {
+        ...entity,
+        position,
+        shape: {
+          ...entity.shape,
+          width: entity.shape.width * fit.scaleX,
+        },
+      };
+    case 'circle':
+      return {
+        ...entity,
+        position,
+      };
+  }
+};
+
+const fitInteractivesToCourse = (interactives: StageInteractives, fit: CourseFit): StageInteractives => ({
+  boosts: interactives.boosts.map((boost) => ({
+    ...boost,
+    x: fitX(boost.x, fit),
+  })),
+  hunters: interactives.hunters.map((hunter) => ({
+    ...hunter,
+    x: fitX(hunter.x, fit),
+    amplitude: hunter.axis === 'x' ? hunter.amplitude * fit.scaleX : hunter.amplitude,
+    driftAmplitudeX: hunter.driftAmplitudeX ? hunter.driftAmplitudeX * fit.scaleX : hunter.driftAmplitudeX,
+  })),
+  kickers: interactives.kickers.map((kicker) => ({
+    ...kicker,
+    hingeX: fitX(kicker.hingeX, fit),
+    length: kicker.length * fit.scaleX,
+    impulse: {
+      ...kicker.impulse,
+      x: kicker.impulse.x * fit.scaleX,
+    },
+  })),
+});
 
 const wall = (points: [number, number][], color?: string): MapEntity => ({
   position: { x: 0, y: 0 },
@@ -318,6 +386,43 @@ function createPinchedFrame(topY: number, goalY: number): MapEntity[] {
       ],
       '#d9fdff'
     ),
+  ];
+}
+
+function createImageMappedPinchedFrame(topY: number): MapEntity[] {
+  const sourceWidth = 1920;
+  const sourceHeight = 1080;
+  const targetHeight = 78;
+  const scale = targetHeight / sourceHeight;
+  const drawX = (COURSE_WIDTH - sourceWidth * scale) / 2;
+  const point = ([x, y]: [number, number]): [number, number] => [drawX + x * scale, topY + y * scale];
+  const leftSource: [number, number][] = [
+    [840, 0],
+    [842, 92],
+    [907, 124],
+    [972, 324],
+    [940, 447],
+    [869, 647],
+    [906, 800],
+    [959, 1079],
+  ];
+  const rightSource: [number, number][] = [
+    [1082, 0],
+    [1079, 93],
+    [1068, 122],
+    [1079, 324],
+    [1014, 446],
+    [945, 647],
+    [990, 796],
+    [1044, 1079],
+  ];
+  const left = leftSource.map(point);
+  const right = rightSource.map(point);
+
+  return [
+    wall(left, '#79efff'),
+    wall(right, '#79efff'),
+    wall([left[0], right[0]], '#d9fdff'),
   ];
 }
 
@@ -970,11 +1075,12 @@ function createManualWorkCourse(): StageDef {
   };
 }
 
-function createQuickDropCourse(options: Partial<Pick<StageDef, 'title' | 'description' | 'background' | 'bossImage'>> = {}): StageDef {
+function createQuickDropCourse(options: QuickDropCourseOptions = {}): StageDef {
   const topY = -10;
   const goalY = 68;
+  const fit = options.fit;
   const entities: MapEntity[] = [
-    ...createPinchedFrame(topY, goalY),
+    ...(options.frame ?? createPinchedFrame(topY, goalY)),
     ...createChaosField([
       [16.4, 13.5, 1.1, 0.14, 0.48, '#78efff'],
       [10.0, 35.8, 1.1, 0.14, -0.42, '#78efff'],
@@ -1010,6 +1116,8 @@ function createQuickDropCourse(options: Partial<Pick<StageDef, 'title' | 'descri
   entities.push(spinner(15.9, 28.2, 2.4, -0.22, -1.75, '#8cefff'));
   entities.push(spinner(10.0, 48.6, 2.2, 0.18, 1.75, '#8cefff'));
   entities.push(spinner(15.8, 64.5, 2.0, -0.14, -1.65, '#8cefff'));
+  const fittedEntities = fit ? entities.map((entity) => fitEntityToCourse(entity, fit)) : entities;
+  const magnetX = fit ? fitX(COURSE_WIDTH / 2, fit) : COURSE_WIDTH / 2;
 
   return {
     title: options.title ?? 'Map 2 - Quick Drop',
@@ -1020,10 +1128,11 @@ function createQuickDropCourse(options: Partial<Pick<StageDef, 'title' | 'descri
     width: COURSE_WIDTH,
     background: options.background,
     bossImage: options.bossImage ?? aiRobotBossImage,
+    spawnCenterX: fit?.centerX,
     showCourseGuides: false,
     windZones: [],
     magnet: {
-      x: COURSE_WIDTH / 2,
+      x: magnetX,
       y: goalY - 16,
       radius: 1.05,
       triggerRadius: 3.8,
@@ -1034,16 +1143,20 @@ function createQuickDropCourse(options: Partial<Pick<StageDef, 'title' | 'descri
       pulseRadius: 4.3,
       pulseForce: 4.4,
     },
-    createInteractives: createQuickDropInteractives,
-    entities,
+    createInteractives: () => {
+      const interactives = createQuickDropInteractives();
+      return fit ? fitInteractivesToCourse(interactives, fit) : interactives;
+    },
+    entities: fittedEntities,
   };
 }
 
 function createSpaceDropCourse(): StageDef {
   const topY = -10;
   return createQuickDropCourse({
-    title: 'Map 4 - Space Drop',
-    description: 'Map 2 layout with the cosmic neon background.',
+    title: 'Map 4 - Race City Drop',
+    description: 'Map 2 layout fitted to the city racing background.',
+    fit: { centerX: 12.45, scaleX: 0.31 },
     background: {
       image: map4SpaceBackground,
       x: 0,
@@ -1057,8 +1170,9 @@ function createSpaceDropCourse(): StageDef {
 function createRaceDropCourse(): StageDef {
   const topY = -10;
   return createQuickDropCourse({
-    title: 'Map 5 - Race Drop',
-    description: 'Map 2 layout with the toy racing course background.',
+    title: 'Map 5 - Sky Forest Drop',
+    description: 'Map 2 layout fitted to the floating forest background.',
+    fit: { centerX: 13.0, scaleX: 0.34 },
     background: {
       image: map5RaceBackground,
       x: 0,
@@ -1072,14 +1186,18 @@ function createRaceDropCourse(): StageDef {
 function createForestDropCourse(): StageDef {
   const topY = -10;
   return createQuickDropCourse({
-    title: 'Map 6 - Forest Drop',
-    description: 'Map 2 layout with the bright forest cliff background.',
+    title: 'Map 6 - Space Drop',
+    description: 'Map 2 layout fitted to the cosmic track background.',
+    frame: createImageMappedPinchedFrame(topY),
     background: {
       image: map6ForestBackground,
       x: 0,
       y: topY,
       width: COURSE_WIDTH,
       height: 78,
+      fit: 'cover',
+      focusX: 0.5,
+      focusY: 0.5,
     },
   });
 }

@@ -141,7 +141,19 @@ export class RouletteRenderer {
 
     this.ctx.save();
     this.ctx.globalAlpha = stage.background.opacity ?? 1;
-    this.ctx.drawImage(image, stage.background.x, stage.background.y, stage.background.width, stage.background.height);
+    if (stage.background.fit === 'cover') {
+      const imageAspect = image.naturalWidth / image.naturalHeight;
+      const targetAspect = stage.background.width / stage.background.height;
+      const drawHeight = imageAspect > targetAspect ? stage.background.height : stage.background.width / imageAspect;
+      const drawWidth = imageAspect > targetAspect ? drawHeight * imageAspect : stage.background.width;
+      const focusX = stage.background.focusX ?? 0.5;
+      const focusY = stage.background.focusY ?? 0.5;
+      const drawX = stage.background.x + (stage.background.width - drawWidth) * focusX;
+      const drawY = stage.background.y + (stage.background.height - drawHeight) * focusY;
+      this.ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+    } else {
+      this.ctx.drawImage(image, stage.background.x, stage.background.y, stage.background.width, stage.background.height);
+    }
     this.ctx.restore();
   }
 
